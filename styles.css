@@ -1,0 +1,54 @@
+body {
+    font-family: Arial, sans-serif;
+    margin: 0;
+    padding: 0;
+}
+
+h1 {
+    background-color: #0071bc;
+    color: white;
+    margin: 0;
+    padding: 15px;
+}
+
+.container {
+    display: flex;
+}
+
+.left-side {
+    flex: 1;
+    padding: 20px;
+}
+
+.right-side {
+    flex: 1;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-start;
+    justify-content: space-around;
+    padding: 20px;
+    background-color: #ffffff;
+}
+
+.push-up-form {
+    margin-bottom: 20px;
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+td, th {
+    padding: 5px;
+    text-align: center;
+}
+
+tr:nth-child(even) {
+    background-color: #f2f2f2;
+}
+
+.chart-container {
+    width: 45%;
+    min-width: 300px;
+}
