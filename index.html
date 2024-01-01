@@ -5,6 +5,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Push Up Tracker</title>
+    <link href="https://fonts.googleapis.com/css2?family=Libre+Baskerville:wght@400;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700&display=swap"
+        rel="stylesheet">
     <link rel="stylesheet" href="styles.css">
 </head>
 
@@ -23,7 +26,7 @@
                 <tr>
                     <th>Date</th>
                     <th>Push ups</th>
-                    <th>Time between first and last set</th>
+                    <th>Total time</th>
                 </tr>
             </table>
         </div>
@@ -35,11 +38,15 @@
             <div class="chart-container">
                 <canvas id="push-up-per-minute-chart"></canvas>
             </div>
+            <div id="calendar" class="chart-container">
+                <canvas id="activity"></canvas>
+            </div>
         </div>
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="pushuptracker.js"></script>
+
 </body>
 
 </html>
