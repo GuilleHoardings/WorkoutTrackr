@@ -93,57 +93,64 @@ function addRowToTable(data) {
 function createOrUpdateCharts() {
     // Check if the charts already exist, if they do, update the data
     if (chart1 && chart2) {
-        chart1.data.labels = pushUpsData.map(data => createShortFormattedDate(new Date(data.date)));
-        chart1.data.datasets[0].data = pushUpsData.map(data => data.pushUps);
-        chart1.update();
-
-        chart2.data.labels = pushUpsData.map(data => createShortFormattedDate(new Date(data.date)));
-        chart2.data.datasets[0].data = pushUpsData.map(data => data.pushUps / data.timeBetweenFirstAndLast);
-        chart2.update();
+        updateDataInCharts();
     } else {
-        // Create the charts using Chart.js
-        chart1 = new Chart(pushUpsChart, {
-            type: "bar",
-            data: {
-                labels: pushUpsData.map(data => createShortFormattedDate(new Date(data.date))),
-                datasets: [{
-                    label: "Push ups",
-                    data: pushUpsData.map(data => data.pushUps),
-                    backgroundColor: "rgba(75, 192, 192, 0.2)",
-                    borderColor: "rgba(75, 192, 192, 1)",
-                    borderWidth: 1,
-                }]
-            },
-            options: {
-                scales: {
-                    y: {
-                        beginAtZero: true
-                    }
-                }
-            }
-        });
-
-        chart2 = new Chart(pushUpsPerMinuteChart, {
-            type: "line",
-            data: {
-                labels: pushUpsData.map(data => createShortFormattedDate(new Date(data.date))),
-                datasets: [{
-                    label: "Push ups per minute",
-                    data: pushUpsData.map(data => data.pushUps / data.timeBetweenFirstAndLast),
-                    fill: false,
-                    borderColor: "rgba(255, 99, 132, 1)",
-                    tension: 0.1,
-                }]
-            },
-            options: {
-                scales: {
-                    y: {
-                        beginAtZero: true
-                    }
-                }
-            }
-        });
+        createCharts();
     }
+}
+
+function createCharts() {
+    chart1 = new Chart(pushUpsChart, {
+        type: "bar",
+        data: {
+            labels: pushUpsData.map(data => createShortFormattedDate(new Date(data.date))),
+            datasets: [{
+                label: "Push ups",
+                data: pushUpsData.map(data => data.pushUps),
+                backgroundColor: "rgba(75, 192, 192, 0.2)",
+                borderColor: "rgba(75, 192, 192, 1)",
+                borderWidth: 1,
+            }]
+        },
+        options: {
+            scales: {
+                y: {
+                    beginAtZero: true
+                }
+            }
+        }
+    });
+
+    chart2 = new Chart(pushUpsPerMinuteChart, {
+        type: "line",
+        data: {
+            labels: pushUpsData.map(data => createShortFormattedDate(new Date(data.date))),
+            datasets: [{
+                label: "Push ups per minute",
+                data: pushUpsData.map(data => data.pushUps / data.timeBetweenFirstAndLast),
+                fill: false,
+                borderColor: "rgba(255, 99, 132, 1)",
+                tension: 0.1,
+            }]
+        },
+        options: {
+            scales: {
+                y: {
+                    beginAtZero: true
+                }
+            }
+        }
+    });
+}
+
+function updateDataInCharts() {
+    chart1.data.labels = pushUpsData.map(data => createShortFormattedDate(new Date(data.date)));
+    chart1.data.datasets[0].data = pushUpsData.map(data => data.pushUps);
+    chart1.update();
+
+    chart2.data.labels = pushUpsData.map(data => createShortFormattedDate(new Date(data.date)));
+    chart2.data.datasets[0].data = pushUpsData.map(data => data.pushUps / data.timeBetweenFirstAndLast);
+    chart2.update();
 }
 
 function createActivityChart() {
