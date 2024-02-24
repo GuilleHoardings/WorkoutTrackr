@@ -235,10 +235,12 @@ function getGreenShade(pushUps) {
     var maxPushUps = 120;
     var color = '#ebedf0';
     if (pushUps > 0) {
-        var shade = Math.round((pushUps / maxPushUps) * 3);
-        color = ['#ebedf0', '#c6e48b', '#7bc96f', '#239a3b'][shade];
+        var shade = Math.round((pushUps / maxPushUps) * 7);
+        color = ['#ffffff', '#d8f0b1', '#96e08e', '#2dbf55', '#1e763e', '#0e6630', '#08401a'][shade];
     }
     return color;
+}
+
 document.getElementById('download-csv').addEventListener('click', function () {
     var jsonData = JSON.parse(localStorage.getItem('pushUpsData'));
 
