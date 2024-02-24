@@ -7,7 +7,7 @@ const pushUpsPerMinuteChart = document.getElementById("push-up-per-minute-chart"
 
 // Variables to store push-up data and charts
 let pushUpsData = [];
-let chart1, chart2;
+let chartPushUpsTotal, chartPushUpsPerMinute;
 
 // Load previously stored data from localStorage
 if (localStorage.getItem("pushUpsData")) {
@@ -92,7 +92,7 @@ function addRowToTable(data) {
 
 function createOrUpdateCharts() {
     // Check if the charts already exist, if they do, update the data
-    if (chart1 && chart2) {
+    if (chartPushUpsTotal && chartPushUpsPerMinute) {
         updateDataInCharts();
     } else {
         createCharts();
@@ -100,7 +100,7 @@ function createOrUpdateCharts() {
 }
 
 function createCharts() {
-    chart1 = new Chart(pushUpsChart, {
+    chartPushUpsTotal = new Chart(pushUpsChart, {
         type: "bar",
         data: {
             labels: pushUpsData.map(data => createShortFormattedDate(new Date(data.date))),
@@ -121,7 +121,7 @@ function createCharts() {
         }
     });
 
-    chart2 = new Chart(pushUpsPerMinuteChart, {
+    chartPushUpsPerMinute = new Chart(pushUpsPerMinuteChart, {
         type: "line",
         data: {
             labels: pushUpsData.map(data => createShortFormattedDate(new Date(data.date))),
@@ -144,13 +144,13 @@ function createCharts() {
 }
 
 function updateDataInCharts() {
-    chart1.data.labels = pushUpsData.map(data => createShortFormattedDate(new Date(data.date)));
-    chart1.data.datasets[0].data = pushUpsData.map(data => data.pushUps);
-    chart1.update();
+    chartPushUpsTotal.data.labels = pushUpsData.map(data => createShortFormattedDate(new Date(data.date)));
+    chartPushUpsTotal.data.datasets[0].data = pushUpsData.map(data => data.pushUps);
+    chartPushUpsTotal.update();
 
-    chart2.data.labels = pushUpsData.map(data => createShortFormattedDate(new Date(data.date)));
-    chart2.data.datasets[0].data = pushUpsData.map(data => data.pushUps / data.timeBetweenFirstAndLast);
-    chart2.update();
+    chartPushUpsPerMinute.data.labels = pushUpsData.map(data => createShortFormattedDate(new Date(data.date)));
+    chartPushUpsPerMinute.data.datasets[0].data = pushUpsData.map(data => data.pushUps / data.timeBetweenFirstAndLast);
+    chartPushUpsPerMinute.update();
 }
 
 function createActivityChart() {
