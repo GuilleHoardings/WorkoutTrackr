@@ -237,5 +237,19 @@ function getGreenShade(pushUps) {
         color = ['#ebedf0', '#c6e48b', '#7bc96f', '#239a3b'][shade];
     }
     return color;
+document.getElementById('download-csv').addEventListener('click', function () {
+    var jsonData = JSON.parse(localStorage.getItem('pushUpsData'));
 
-}
+    // Convert JSON data to CSV data
+    var data = jsonData.map(row => [row.date, row.pushUps, row.timeBetweenFirstAndLast]);
+    data.unshift(['Date', 'Push Ups', 'Time Between First and Last']); // Add header row
+
+    var csv = data.map(row => row.join(',')).join('\n');
+    var csvContent = 'data:text/csv;charset=utf-8,' + csv;
+    var encodedUri = encodeURI(csvContent);
+    var link = document.createElement('a');
+    link.setAttribute('href', encodedUri);
+    link.setAttribute('download', 'pushUpsData.csv');
+    document.body.appendChild(link); // Required for Firefox
+    link.click(); // This will download the data file named "pushUpsData.csv".
+});
