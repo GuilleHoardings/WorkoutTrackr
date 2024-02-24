@@ -81,11 +81,13 @@ function addRowToTable(data) {
     const dateCell = row.insertCell(0);
     const pushUpsCell = row.insertCell(1);
     const timeCell = row.insertCell(2);
+    const pushUpsPerMinuteCell = row.insertCell(3);
 
     // Format and display the data in the table
     dateCell.innerHTML = createLongFormattedDate(new Date(data.date));
     pushUpsCell.innerHTML = data.pushUps;
     timeCell.innerHTML = data.timeBetweenFirstAndLast + ' minutes';
+    pushUpsPerMinuteCell.innerHTML = (data.pushUps / data.timeBetweenFirstAndLast).toFixed(2);
 }
 
 function createOrUpdateCharts() {
