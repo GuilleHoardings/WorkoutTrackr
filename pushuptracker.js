@@ -7,7 +7,7 @@ const pushUpsPerMinuteChart = document.getElementById("push-up-per-minute-chart"
 
 // Variables to store push-up data and charts
 let pushUpsData = [];
-let chartPushUpsTotal, chartPushUpsPerMinute;
+let chartPushUpsTotal, chartPushUpsPerMinute, activityChart;
 
 // Load previously stored data from localStorage
 if (localStorage.getItem("pushUpsData")) {
@@ -154,6 +154,10 @@ function updateDataInCharts() {
 }
 
 function createActivityChart() {
+    if (activityChart) {
+        return;  // Chart already exists, no need to recreate
+    }
+
     var data = JSON.parse(localStorage.getItem('pushUpsData'));
 
     // Get the range of years from pushUpsData
@@ -235,16 +239,31 @@ function getWeekNumber(date) {
     return [d.getUTCFullYear(), Math.ceil((((d - yearStart) / 86400000) + 1) / 7)];
 }
 
-function getGreenShade(pushUps) {
+function getGreenShadeDiscrete(pushUps) {
     // Return green, but it make it proportional to the push-up count, with a
     // maximum of 120. The hihger the push-up count, the darker the shade of
     // green. Using github's color scale.
     var maxPushUps = 120;
     var color = '#ebedf0';
     if (pushUps > 0) {
-        var shade = Math.round((pushUps / maxPushUps) * 7);
-        color = ['#ffffff', '#d8f0b1', '#96e08e', '#2dbf55', '#1e763e', '#0e6630', '#08401a'][shade];
+        var colors = ['#ffffff', '#d8f0b1', '#96e08e', '#2dbf55', '#1e763e', '#0e6630', '#08401a']
+        var shade = Math.round((pushUps / maxPushUps) * (color.length + 1));
     }
+    return colors[shade] || color;
+}
+
+function getGreenShade(pushUps) {
+    var maxPushUps = 120;
+    var minLightness = 10;
+    var maxLightness = 70;
+
+    if (pushUps > 0) {
+        var lightness = maxLightness - (pushUps / maxPushUps) * (maxLightness - minLightness);
+        var color = 'hsl(130, 100%, ' + lightness + '%)';
+    } else {
+        var color = '#ebedf0'; // Default color for 0 push-ups
+    }
+
     return color;
 }
 
