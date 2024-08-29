@@ -11,6 +11,17 @@ h1 {
     padding: 15px;
 }
 
+.header {
+    background-color: rgba(54, 69, 79, 1);
+    display: flex;
+    align-items: center;
+}
+
+#logo {
+    width: 75px;
+    margin: 10px;
+}
+
 .container {
     display: flex;
 }
