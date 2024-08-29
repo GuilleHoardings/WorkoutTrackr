@@ -90,6 +90,21 @@ function addRowToTable(data) {
     pushUpsPerMinuteCell.innerHTML = (data.pushUps / data.timeBetweenFirstAndLast).toFixed(2);
 }
 
+function aggregateDataByMonth(data) {
+    const monthlyData = {};
+    data.forEach(entry => {
+        const date = new Date(entry.date);
+        const key = `${date.getFullYear()}-${date.getMonth() + 1}`;
+        if (!monthlyData[key]) {
+            monthlyData[key] = { year: date.getFullYear(), month: date.getMonth() + 1, pushUps: 0 };
+        }
+        monthlyData[key].pushUps += entry.pushUps;
+    });
+    return Object.values(monthlyData).sort((a, b) => {
+        return a.year - b.year || a.month - b.month;
+    });
+}
+
 function createOrUpdateCharts() {
     // Check if the charts already exist, if they do, update the data
     if (chartPushUpsTotal && chartPushUpsPerMinute) {
@@ -131,6 +146,28 @@ function createCharts() {
                 fill: false,
                 borderColor: "rgba(255, 99, 132, 1)",
                 tension: 0.1,
+            }]
+        },
+        options: {
+            scales: {
+                y: {
+                    beginAtZero: true
+                }
+            }
+        }
+    });
+
+    const monthlyData = aggregateDataByMonth(pushUpsData);
+    chartPushUpsPerMonth = new Chart(document.getElementById('push-up-per-month-chart'), {
+        type: "bar",
+        data: {
+            labels: monthlyData.map(d => `${d.year}-${d.month}`),
+            datasets: [{
+                label: "Push ups per Month",
+                data: monthlyData.map(d => d.pushUps),
+                backgroundColor: "rgba(75, 192, 192, 0.2)",
+                borderColor: "rgba(75, 192, 192, 1)",
+                borderWidth: 1,
             }]
         },
         options: {
