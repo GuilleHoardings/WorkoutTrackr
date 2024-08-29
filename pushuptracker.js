@@ -283,3 +283,45 @@ document.getElementById('download-csv').addEventListener('click', function () {
     document.body.appendChild(link); // Required for Firefox
     link.click(); // This will download the data file named "pushUpsData.csv".
 });
+
+document.getElementById('import-csv').addEventListener('click', function () {
+    document.getElementById('file-input').click();
+});
+
+document.getElementById('file-input').addEventListener('change', function (e) {
+    const file = e.target.files[0];
+    const reader = new FileReader();
+
+    reader.onload = function (event) {
+        const csvData = event.target.result;
+        const rows = csvData.split('\n');
+
+        // Skip the header row
+        for (let i = 1; i < rows.length; i++) {
+            const columns = rows[i].split(',');
+            if (columns.length === 3) {
+                const pushUpData = {
+                    date: new Date(columns[0]),
+                    pushUps: parseInt(columns[1]),
+                    timeBetweenFirstAndLast: parseInt(columns[2])
+                };
+                pushUpsData.push(pushUpData);
+            }
+        }
+
+        // Save to localStorage
+        localStorage.setItem("pushUpsData", JSON.stringify(pushUpsData));
+
+        // Clear and repopulate the table
+        while (pushUpTable.rows.length > 1) {
+            pushUpTable.deleteRow(-1);
+        }
+        pushUpsData.forEach(data => addRowToTable(data));
+
+        // Update charts
+        createOrUpdateCharts();
+        createActivityChart();
+    };
+
+    reader.readAsText(file);
+});
