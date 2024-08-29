@@ -284,29 +284,39 @@ document.getElementById('download-csv').addEventListener('click', function () {
     link.click(); // This will download the data file named "pushUpsData.csv".
 });
 
-document.getElementById('import-csv').addEventListener('click', function () {
-    document.getElementById('file-input').click();
-});
+function parseCSVData(csvData) {
+    const rows = csvData.split('\n');
+    const parsedData = [];
 
-document.getElementById('file-input').addEventListener('change', function (e) {
-    const file = e.target.files[0];
+    // Skip the header row
+    for (let i = 1; i < rows.length; i++) {
+        const columns = rows[i].split(',');
+        if (columns.length === 3) {
+            const pushUpData = {
+                date: new Date(columns[0]),
+                pushUps: parseInt(columns[1]),
+                timeBetweenFirstAndLast: parseInt(columns[2])
+            };
+            parsedData.push(pushUpData);
+        }
+    }
+
+    return parsedData;
+}
+
+function importCSV(replace = false) {
+    const fileInput = replace ? 'file-input-replace' : 'file-input';
+    const file = document.getElementById(fileInput).files[0];
     const reader = new FileReader();
 
     reader.onload = function (event) {
         const csvData = event.target.result;
-        const rows = csvData.split('\n');
+        const parsedData = parseCSVData(csvData);
 
-        // Skip the header row
-        for (let i = 1; i < rows.length; i++) {
-            const columns = rows[i].split(',');
-            if (columns.length === 3) {
-                const pushUpData = {
-                    date: new Date(columns[0]),
-                    pushUps: parseInt(columns[1]),
-                    timeBetweenFirstAndLast: parseInt(columns[2])
-                };
-                pushUpsData.push(pushUpData);
-            }
+        if (replace) {
+            pushUpsData = parsedData;
+        } else {
+            pushUpsData = pushUpsData.concat(parsedData);
         }
 
         // Save to localStorage
@@ -324,4 +334,20 @@ document.getElementById('file-input').addEventListener('change', function (e) {
     };
 
     reader.readAsText(file);
+}
+
+document.getElementById('import-csv').addEventListener('click', function () {
+    document.getElementById('file-input').click();
+});
+
+document.getElementById('file-input').addEventListener('change', function () {
+    importCSV(false);
+});
+
+document.getElementById('import-csv-replace').addEventListener('click', function () {
+    document.getElementById('file-input-replace').click();
+});
+
+document.getElementById('file-input-replace').addEventListener('change', function () {
+    importCSV(true);
 });
