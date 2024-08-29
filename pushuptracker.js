@@ -158,26 +158,65 @@ function createCharts() {
     });
 
     const monthlyData = aggregateDataByMonth(pushUpsData);
+    const years = [...new Set(monthlyData.map(d => d.year))];
+    const colorScale = generateColorScale(years.length);
+    const allMonths = monthlyData.map(d => `${d.year}-${d.month}`);
+    const datasets = years.map((year, index) => {
+        const yearData = new Array(allMonths.length).fill(null);
+        monthlyData.filter(d => d.year === year).forEach(d => {
+            const monthIndex = allMonths.indexOf(`${d.year}-${d.month}`);
+            yearData[monthIndex] = d.pushUps;
+        });
+
+        return {
+            label: year.toString(),
+            data: yearData,
+            backgroundColor: colorScale[index],
+            borderColor: colorScale[index],
+            borderWidth: 1,
+        };
+    });
+
     chartPushUpsPerMonth = new Chart(document.getElementById('push-up-per-month-chart'), {
         type: "bar",
         data: {
-            labels: monthlyData.map(d => `${d.year}-${d.month}`),
-            datasets: [{
-                label: "Push ups per Month",
-                data: monthlyData.map(d => d.pushUps),
-                backgroundColor: "rgba(75, 192, 192, 0.2)",
-                borderColor: "rgba(75, 192, 192, 1)",
-                borderWidth: 1,
-            }]
+            labels: allMonths,
+            datasets: datasets
         },
         options: {
             scales: {
+                x: {
+                    ticks: {
+                        autoSkip: false,
+                        maxRotation: 0,
+                        minRotation: 0,
+                        callback: function (val, index) {
+                            const label = this.getLabelForValue(val);
+                            const [year, month] = label.split('-');
+                            if (index === 0 || allMonths[index - 1].split('-')[0] !== year) {
+                                return [`${month}`, year];
+                            }
+                            return month;
+                        }
+                    }
+                },
                 y: {
                     beginAtZero: true
                 }
-            }
+            },
+            responsive: true,
+            maintainAspectRatio: false
         }
     });
+}
+
+function generateColorScale(numColors) {
+    const colors = [];
+    for (let i = 0; i < numColors; i++) {
+        const hue = (i * 360 / numColors) % 360;
+        colors.push(`hsla(${hue}, 70%, 60%, 0.7)`);
+    }
+    return colors;
 }
 
 function updateDataInCharts() {
@@ -188,6 +227,24 @@ function updateDataInCharts() {
     chartPushUpsPerMinute.data.labels = pushUpsData.map(data => createShortFormattedDate(new Date(data.date)));
     chartPushUpsPerMinute.data.datasets[0].data = pushUpsData.map(data => data.pushUps / data.timeBetweenFirstAndLast);
     chartPushUpsPerMinute.update();
+
+    chartPushUpsPerMonth.data.labels = allMonths;
+    chartPushUpsPerMonth.data.datasets = years.map((year, index) => {
+        const yearData = new Array(allMonths.length).fill(null);
+        monthlyData.filter(d => d.year === year).forEach(d => {
+            const monthIndex = allMonths.indexOf(`${d.year}-${d.month}`);
+            yearData[monthIndex] = d.pushUps;
+        });
+
+        return {
+            label: year.toString(),
+            data: yearData,
+            backgroundColor: colorScale[index],
+            borderColor: colorScale[index],
+            borderWidth: 1,
+        };
+    });
+    chartPushUpsPerMonth.update();
 }
 
 function createActivityChart() {
