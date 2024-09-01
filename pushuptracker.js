@@ -2,19 +2,16 @@
 const pushUpForm = document.getElementById("push-up-form");
 const pushUpTable = document.getElementById("push-up-table");
 const pushUpsInput = document.getElementById("push-ups");
-const pushUpsChart = document.getElementById("push-up-chart");
-const pushUpsPerMinuteChart = document.getElementById("push-up-per-minute-chart");
 
 // Variables to store push-up data and charts
 let pushUpsData = [];
-let chartPushUpsTotal, chartPushUpsPerMinute, activityChart;
+let chartPushUpsTotal, chartPushUpsPerMinute, chartPushUpsPerMonth, chartActivity;
 
 // Load previously stored data from localStorage
 if (localStorage.getItem("pushUpsData")) {
     pushUpsData = JSON.parse(localStorage.getItem("pushUpsData"));
     pushUpsData.forEach(data => addRowToTable(data));
     createOrUpdateCharts();
-    createActivityChart();
 }
 
 // Listen to the form's submit event
@@ -108,20 +105,22 @@ function aggregateDataByMonth(data) {
 function createOrUpdateCharts() {
     // Check if the charts already exist, if they do, update the data
     if (chartPushUpsTotal && chartPushUpsPerMinute) {
-        updateDataInCharts();
+        updateCharts();
     } else {
         createCharts();
     }
 }
 
 function createCharts() {
-    chartPushUpsTotal = new Chart(pushUpsChart, {
+    const canvasChartPushUps = document.getElementById("push-up-chart");
+    const shortFormattedDates = getShortFormattedDates();
+    chartPushUpsTotal = new Chart(canvasChartPushUps, {
         type: "bar",
         data: {
-            labels: pushUpsData.map(data => createShortFormattedDate(new Date(data.date))),
+            labels: shortFormattedDates,
             datasets: [{
                 label: "Push ups",
-                data: pushUpsData.map(data => data.pushUps),
+                data: getPushUpsPerDate(),
                 backgroundColor: "rgba(75, 192, 192, 0.2)",
                 borderColor: "rgba(75, 192, 192, 1)",
                 borderWidth: 1,
@@ -136,10 +135,11 @@ function createCharts() {
         }
     });
 
-    chartPushUpsPerMinute = new Chart(pushUpsPerMinuteChart, {
+    const canvasChartPushUpsPerMinute = document.getElementById("push-up-per-minute-chart");
+    chartPushUpsPerMinute = new Chart(canvasChartPushUpsPerMinute, {
         type: "line",
         data: {
-            labels: pushUpsData.map(data => createShortFormattedDate(new Date(data.date))),
+            labels: shortFormattedDates,
             datasets: [{
                 label: "Push ups per minute",
                 data: pushUpsData.map(data => data.pushUps / data.timeBetweenFirstAndLast),
@@ -177,7 +177,8 @@ function createCharts() {
         };
     });
 
-    chartPushUpsPerMonth = new Chart(document.getElementById('push-up-per-month-chart'), {
+    const canvasChartPushUpsPerMonth = document.getElementById("push-up-per-month-chart");
+    chartPushUpsPerMonth = new Chart(canvasChartPushUpsPerMonth, {
         type: "bar",
         data: {
             labels: allMonths,
@@ -208,6 +209,20 @@ function createCharts() {
             maintainAspectRatio: false
         }
     });
+
+    createActivityChart();
+}
+
+function getPushUpsPerDate() {
+    return pushUpsData.map(data => data.pushUps);
+}
+
+function getShortFormattedDates() {
+    return pushUpsData.map(data => createShortFormattedDate(new Date(data.date)));
+}
+
+function getPushUpsPerMinute() {
+    return pushUpsData.map(data => data.pushUps / data.timeBetweenFirstAndLast);
 }
 
 function generateColorScale(numColors) {
@@ -219,13 +234,15 @@ function generateColorScale(numColors) {
     return colors;
 }
 
-function updateDataInCharts() {
-    chartPushUpsTotal.data.labels = pushUpsData.map(data => createShortFormattedDate(new Date(data.date)));
-    chartPushUpsTotal.data.datasets[0].data = pushUpsData.map(data => data.pushUps);
+function updateCharts() {
+    const shortFormattedDates = getShortFormattedDates();
+
+    chartPushUpsTotal.data.labels = shortFormattedDates;
+    chartPushUpsTotal.data.datasets[0].data = getPushUpsPerDate();
     chartPushUpsTotal.update();
 
-    chartPushUpsPerMinute.data.labels = pushUpsData.map(data => createShortFormattedDate(new Date(data.date)));
-    chartPushUpsPerMinute.data.datasets[0].data = pushUpsData.map(data => data.pushUps / data.timeBetweenFirstAndLast);
+    chartPushUpsPerMinute.data.labels = shortFormattedDates;
+    chartPushUpsPerMinute.data.datasets[0].data = getPushUpsPerMinute();
     chartPushUpsPerMinute.update();
 
     chartPushUpsPerMonth.data.labels = allMonths;
@@ -248,7 +265,7 @@ function updateDataInCharts() {
 }
 
 function createActivityChart() {
-    if (activityChart) {
+    if (chartActivity) {
         return;  // Chart already exists, no need to recreate
     }
 
@@ -424,7 +441,6 @@ function importCSV(replace = false) {
 
         // Update charts
         createOrUpdateCharts();
-        createActivityChart();
     };
 
     reader.readAsText(file);
