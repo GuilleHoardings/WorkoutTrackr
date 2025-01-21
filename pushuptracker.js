@@ -236,15 +236,22 @@ function generateColorScale(numColors) {
 
 function updateCharts() {
     const shortFormattedDates = getShortFormattedDates();
+    const monthlyData = aggregateDataByMonth(pushUpsData);
+    const years = [...new Set(monthlyData.map(d => d.year))];
+    const colorScale = generateColorScale(years.length);
+    const allMonths = monthlyData.map(d => `${d.year}-${d.month}`);
 
+    // Update total push-ups chart
     chartPushUpsTotal.data.labels = shortFormattedDates;
     chartPushUpsTotal.data.datasets[0].data = getPushUpsPerDate();
     chartPushUpsTotal.update();
 
+    // Update push-ups per minute chart
     chartPushUpsPerMinute.data.labels = shortFormattedDates;
     chartPushUpsPerMinute.data.datasets[0].data = getPushUpsPerMinute();
     chartPushUpsPerMinute.update();
 
+    // Update monthly chart
     chartPushUpsPerMonth.data.labels = allMonths;
     chartPushUpsPerMonth.data.datasets = years.map((year, index) => {
         const yearData = new Array(allMonths.length).fill(null);
@@ -262,6 +269,9 @@ function updateCharts() {
         };
     });
     chartPushUpsPerMonth.update();
+
+    // Update activity chart
+    createActivityChart();
 }
 
 function createActivityChart() {
