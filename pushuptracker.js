@@ -329,14 +329,27 @@ function createActivityChart() {
                 ctx.fillRect(x, y, cellSize, cellSize);
             }
         }
-
     }
-    // Draw the push-ups
+
+    // Create a map to store cell data
+    const cellMap = new Map();
+
+    // Create tooltip once
+    let tooltip = document.createElement('div');
+    tooltip.style.position = 'absolute';
+    tooltip.style.display = 'none';
+    tooltip.style.background = 'rgba(0, 0, 0, 0.8)';
+    tooltip.style.color = 'white';
+    tooltip.style.padding = '5px';
+    tooltip.style.borderRadius = '3px';
+    tooltip.style.fontSize = '12px';
+    document.body.appendChild(tooltip);
+
+    // When drawing push-ups data, store the cell info
     for (var i = 0; i < data.length; i++) {
         var date = new Date(data[i].date);
         var year = date.getFullYear();
         var day = date.getDay();
-        // Make the week start in Monday
         if (day === 0) {
             day = 6;
         } else {
@@ -345,11 +358,48 @@ function createActivityChart() {
         var week = getWeekNumber(date)[1] - 1;
         var x = week * cellSize + padding * (week + 1);
         var y = day * cellSize + padding * (day + 1) + (year - minYear) * yearHeight + (year - minYear + 1) * yearPadding + yearTextSize + monthTextSize;
+
+        // Store cell data with its position and dimensions
+        cellMap.set(`${x},${y}`, {
+            x: x,
+            y: y,
+            width: cellSize,
+            height: cellSize,
+            date: date,
+            pushUps: data[i].pushUps
+        });
+
         var color = getGreenShade(data[i].pushUps);
-        // console.log(`year: ${year} day: ${day}, week: ${week}, x: ${x}, y: ${y}, color: ${color}`); // eslint-disable-line no-console
         ctx.fillStyle = color;
         ctx.fillRect(x, y, cellSize, cellSize);
     }
+
+    canvas.addEventListener('mousemove', function (e) {
+        const rect = canvas.getBoundingClientRect();
+        const mouseX = e.clientX - rect.left;
+        const mouseY = e.clientY - rect.top;
+
+        // Check each cell in our map
+        let found = false;
+        cellMap.forEach((cell) => {
+            if (mouseX >= cell.x && mouseX <= cell.x + cell.width &&
+                mouseY >= cell.y && mouseY <= cell.y + cell.height) {
+                tooltip.style.display = 'block';
+                tooltip.style.left = (e.pageX + 10) + 'px';
+                tooltip.style.top = (e.pageY + 10) + 'px';
+                tooltip.innerHTML = `Date: ${cell.date.toLocaleDateString()}<br>Push-ups: ${cell.pushUps}`;
+                found = true;
+            }
+        });
+
+        if (!found) {
+            tooltip.style.display = 'none';
+        }
+    });
+
+    canvas.addEventListener('mouseout', function () {
+        tooltip.style.display = 'none';
+    });
 }
 
 function getWeekNumber(date) {
