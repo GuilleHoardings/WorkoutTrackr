@@ -292,13 +292,13 @@ function createActivityChart() {
     var cellSize = 10;
     var padding = 2;
     var yearPadding = 10;
-    var yearTextSize = 10;
+    var yearTextSize = 25;
     var monthTextSize = 15;
     var yearWidth = 53 * cellSize + padding * 54;
     var yearHeight = 7 * cellSize + padding * 8 + yearTextSize + monthTextSize;
 
     canvas.width = yearWidth;
-    canvas.height = numYears * yearHeight + yearPadding * 2;
+    canvas.height = numYears * yearHeight + yearPadding * 4;
 
     // Define an array of month names each two months
     var monthNames = ['Jan', 'Mar', 'May', 'Jul', 'Sep', 'Nov']
