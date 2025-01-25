@@ -210,7 +210,7 @@ function createCharts() {
         }
     });
 
-    createActivityChart();
+    createPushUpActivityChart();
 }
 
 function getPushUpsPerDate() {
@@ -223,15 +223,6 @@ function getShortFormattedDates() {
 
 function getPushUpsPerMinute() {
     return pushUpsData.map(data => data.pushUps / data.timeBetweenFirstAndLast);
-}
-
-function generateColorScale(numColors) {
-    const colors = [];
-    for (let i = 0; i < numColors; i++) {
-        const hue = (i * 360 / numColors) % 360;
-        colors.push(`hsla(${hue}, 70%, 60%, 0.7)`);
-    }
-    return colors;
 }
 
 function updateCharts() {
@@ -271,22 +262,25 @@ function updateCharts() {
     chartPushUpsPerMonth.update();
 
     // Update activity chart
-    createActivityChart();
+    createPushUpActivityChart();
 }
 
-function createActivityChart() {
-    if (chartActivity) {
-        return;  // Chart already exists, no need to recreate
-    }
+function createPushUpActivityChart() {
+    const pushUpsData = JSON.parse(localStorage.getItem('pushUpsData'));
+    const activityData = pushUpsData.map(item => ({
+        date: item.date,
+        value: item.pushUps
+    }));
+    const canvas = document.getElementById('activity');
+    createActivityChart(activityData, canvas);
+}
 
-    var data = JSON.parse(localStorage.getItem('pushUpsData'));
-
-    // Get the range of years from pushUpsData
+function createActivityChart(data, canvas) {
+    // Get the range of years
     var minYear = new Date(data[0].date).getFullYear();
     var maxYear = new Date(data[data.length - 1].date).getFullYear();
     var numYears = maxYear - minYear + 1;
 
-    var canvas = document.getElementById('activity');
     var ctx = canvas.getContext('2d');
 
     var cellSize = 10;
@@ -345,19 +339,18 @@ function createActivityChart() {
     tooltip.style.fontSize = '12px';
     document.body.appendChild(tooltip);
 
-    // When drawing push-ups data, store the cell info
     for (var i = 0; i < data.length; i++) {
         var date = new Date(data[i].date);
         var year = date.getFullYear();
-        var day = date.getDay();
-        if (day === 0) {
-            day = 6;
+        var dayOfWeekIndex = date.getDay();
+        if (dayOfWeekIndex === 0) {
+            dayOfWeekIndex = 6;
         } else {
-            day--;
+            dayOfWeekIndex--;
         }
         var week = weeksFromYearStart(date);
         var x = week * cellSize + padding * (week + 1);
-        var y = day * cellSize + padding * (day + 1) + (year - minYear) * yearHeight + (year - minYear + 1) * yearPadding + yearTextSize + monthTextSize;
+        var y = dayOfWeekIndex * cellSize + padding * (dayOfWeekIndex + 1) + (year - minYear) * yearHeight + (year - minYear + 1) * yearPadding + yearTextSize + monthTextSize;
 
         // Store cell data with its position and dimensions
         cellMap.set(`${x},${y}`, {
@@ -366,10 +359,10 @@ function createActivityChart() {
             width: cellSize,
             height: cellSize,
             date: date,
-            pushUps: data[i].pushUps
+            cellValue: data[i].value
         });
 
-        var color = getGreenShade(data[i].pushUps);
+        var color = getGreenShade(data[i].value);
         ctx.fillStyle = color;
         ctx.fillRect(x, y, cellSize, cellSize);
     }
@@ -387,7 +380,7 @@ function createActivityChart() {
                 tooltip.style.display = 'block';
                 tooltip.style.left = (e.pageX + 10) + 'px';
                 tooltip.style.top = (e.pageY + 10) + 'px';
-                tooltip.innerHTML = `Date: ${cell.date.toLocaleDateString()}<br>Push-ups: ${cell.pushUps}`;
+                tooltip.innerHTML = `Date: ${cell.date.toLocaleDateString()}<br>Value: ${cell.cellValue}`;
                 found = true;
             }
         });
@@ -400,34 +393,6 @@ function createActivityChart() {
     canvas.addEventListener('mouseout', function () {
         tooltip.style.display = 'none';
     });
-}
-
-function getGreenShadeDiscrete(pushUps) {
-    // Return green, but it make it proportional to the push-up count, with a
-    // maximum of 120. The hihger the push-up count, the darker the shade of
-    // green. Using github's color scale.
-    var maxPushUps = 120;
-    var color = '#ebedf0';
-    if (pushUps > 0) {
-        var colors = ['#ffffff', '#d8f0b1', '#96e08e', '#2dbf55', '#1e763e', '#0e6630', '#08401a']
-        var shade = Math.round((pushUps / maxPushUps) * (color.length + 1));
-    }
-    return colors[shade] || color;
-}
-
-function getGreenShade(pushUps) {
-    var maxPushUps = 120;
-    var minLightness = 10;
-    var maxLightness = 70;
-
-    if (pushUps > 0) {
-        var lightness = maxLightness - (pushUps / maxPushUps) * (maxLightness - minLightness);
-        var color = 'hsl(130, 100%, ' + lightness + '%)';
-    } else {
-        var color = '#ebedf0'; // Default color for 0 push-ups
-    }
-
-    return color;
 }
 
 document.getElementById('download-csv').addEventListener('click', function () {
