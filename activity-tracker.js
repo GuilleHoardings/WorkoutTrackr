@@ -16,3 +16,160 @@ function weeksFromYearStart(date) {
     const weekNumber = Math.ceil(dayOfYear / 7);
     return weekNumber - 1;
 }
+
+function generateColorScale(numColors) {
+    const colors = [];
+    for (let i = 0; i < numColors; i++) {
+        const hue = (i * 360 / numColors) % 360;
+        colors.push(`hsla(${hue}, 70%, 60%, 0.7)`);
+    }
+    return colors;
+}
+
+function getGreenShadeDiscrete(pushUps) {
+    // Return green, but it make it proportional to the push-up count, with a
+    // maximum of 120. The hihger the push-up count, the darker the shade of
+    // green. Using github's color scale.
+    var maxPushUps = 120;
+    var color = '#ebedf0';
+    if (pushUps > 0) {
+        var colors = ['#ffffff', '#d8f0b1', '#96e08e', '#2dbf55', '#1e763e', '#0e6630', '#08401a']
+        var shade = Math.round((pushUps / maxPushUps) * (color.length + 1));
+    }
+    return colors[shade] || color;
+}
+
+function getGreenShade(pushUps) {
+    var maxPushUps = 120;
+    var minLightness = 10;
+    var maxLightness = 70;
+
+    if (pushUps > 0) {
+        var lightness = maxLightness - (pushUps / maxPushUps) * (maxLightness - minLightness);
+        var color = 'hsl(130, 100%, ' + lightness + '%)';
+    } else {
+        var color = '#ebedf0'; // Default color for 0 push-ups
+    }
+
+    return color;
+}
+
+function createActivityChart(data, canvas) {
+    // Get the range of years
+    var minYear = new Date(data[0].date).getFullYear();
+    var maxYear = new Date(data[data.length - 1].date).getFullYear();
+    var numYears = maxYear - minYear + 1;
+
+    var ctx = canvas.getContext('2d');
+
+    var cellSize = 10;
+    var padding = 2;
+    var yearPadding = 10;
+    var yearTextSize = 25;
+    var monthTextSize = 15;
+    var yearWidth = 53 * cellSize + padding * 54;
+    var yearHeight = 7 * cellSize + padding * 8 + yearTextSize + monthTextSize;
+
+    canvas.width = yearWidth;
+    canvas.height = numYears * yearHeight + yearPadding * 4;
+
+    // Define an array of month names each two months
+    var monthNames = ['Jan', 'Mar', 'May', 'Jul', 'Sep', 'Nov']
+
+    // Draw the years in reverse order
+    for (var absYear = maxYear; absYear >= minYear; absYear--) {
+        // Print the year
+        var year = absYear - minYear;
+        ctx.fillStyle = '#888';
+        ctx.font = 'bold 10px sans-serif';
+        yYearStart = year * yearHeight + (year + 1) * yearPadding + yearTextSize + monthTextSize;
+        ctx.fillText(absYear, padding, yYearStart - monthTextSize);
+
+        // Draw the grid
+        for (var i = 0; i < 53; i++) {
+            // Draw the month names
+            if (i % 9 === 0) {
+                var month = Math.floor(i / 9);
+                ctx.fillStyle = '#888';
+                ctx.font = 'bold 10px sans-serif';
+                ctx.fillText(monthNames[month], i * cellSize + padding * (i + 1), yYearStart);
+            }
+
+            ctx.fillStyle = '#ddd';
+            for (var j = 0; j < 7; j++) {
+                var x = i * cellSize + padding * (i + 1);
+                var y = j * cellSize + padding * (j + 1) + yYearStart;
+                ctx.fillRect(x, y, cellSize, cellSize);
+            }
+        }
+    }
+
+    // Create a map to store cell data
+    const cellMap = new Map();
+
+    // Create tooltip once
+    let tooltip = document.createElement('div');
+    tooltip.style.position = 'absolute';
+    tooltip.style.display = 'none';
+    tooltip.style.background = 'rgba(0, 0, 0, 0.8)';
+    tooltip.style.color = 'white';
+    tooltip.style.padding = '5px';
+    tooltip.style.borderRadius = '3px';
+    tooltip.style.fontSize = '12px';
+    document.body.appendChild(tooltip);
+
+    for (var i = 0; i < data.length; i++) {
+        var date = new Date(data[i].date);
+        var year = date.getFullYear();
+        var dayOfWeekIndex = date.getDay();
+        if (dayOfWeekIndex === 0) {
+            dayOfWeekIndex = 6;
+        } else {
+            dayOfWeekIndex--;
+        }
+        var week = weeksFromYearStart(date);
+        var x = week * cellSize + padding * (week + 1);
+        var y = dayOfWeekIndex * cellSize + padding * (dayOfWeekIndex + 1) + (year - minYear) * yearHeight + (year - minYear + 1) * yearPadding + yearTextSize + monthTextSize;
+
+        // Store cell data with its position and dimensions
+        cellMap.set(`${x},${y}`, {
+            x: x,
+            y: y,
+            width: cellSize,
+            height: cellSize,
+            date: date,
+            cellValue: data[i].value
+        });
+
+        var color = getGreenShade(data[i].value);
+        ctx.fillStyle = color;
+        ctx.fillRect(x, y, cellSize, cellSize);
+    }
+
+    canvas.addEventListener('mousemove', function (e) {
+        const rect = canvas.getBoundingClientRect();
+        const mouseX = e.clientX - rect.left;
+        const mouseY = e.clientY - rect.top;
+
+        // Check each cell in our map
+        let found = false;
+        cellMap.forEach((cell) => {
+            if (mouseX >= cell.x && mouseX <= cell.x + cell.width &&
+                mouseY >= cell.y && mouseY <= cell.y + cell.height) {
+                tooltip.style.display = 'block';
+                tooltip.style.left = (e.pageX + 10) + 'px';
+                tooltip.style.top = (e.pageY + 10) + 'px';
+                tooltip.innerHTML = `Date: ${cell.date.toLocaleDateString()}<br>Value: ${cell.cellValue}`;
+                found = true;
+            }
+        });
+
+        if (!found) {
+            tooltip.style.display = 'none';
+        }
+    });
+
+    canvas.addEventListener('mouseout', function () {
+        tooltip.style.display = 'none';
+    });
+}
