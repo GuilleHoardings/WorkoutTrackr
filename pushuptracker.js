@@ -355,7 +355,7 @@ function createActivityChart() {
         } else {
             day--;
         }
-        var week = getWeekNumber(date)[1] - 1;
+        var week = weeksFromYearStart(date);
         var x = week * cellSize + padding * (week + 1);
         var y = day * cellSize + padding * (day + 1) + (year - minYear) * yearHeight + (year - minYear + 1) * yearPadding + yearTextSize + monthTextSize;
 
@@ -400,14 +400,6 @@ function createActivityChart() {
     canvas.addEventListener('mouseout', function () {
         tooltip.style.display = 'none';
     });
-}
-
-function getWeekNumber(date) {
-    var d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
-    var dayNum = d.getUTCDay() || 7;
-    d.setUTCDate(d.getUTCDate() + 4 - dayNum);
-    var yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
-    return [d.getUTCFullYear(), Math.ceil((((d - yearStart) / 86400000) + 1) / 7)];
 }
 
 function getGreenShadeDiscrete(pushUps) {
