@@ -1,7 +1,14 @@
+/**
+ * Calculates the week number of the year for the given date.
+ * 
+ * The week number is calculated based on the first day of the year, considering
+ * Sunday as the last day of the week (6) if the first day of the year is a
+ * Sunday (0).
+ * 
+ * @param {Date} date - The date for which to calculate the week number.
+ * @returns {number} The week number of the year for the given date, starting from 0.
+ */
 function weeksFromYearStart(date) {
-    // Returns the number of weeks from the first week of the year, considering
-    // the first week of the year as the first week where there is a day of the
-    // year.
     const firstDayOfYear = new Date(date.getFullYear(), 0, 1);
 
     // Get the day of the week for the first day of the year. If it's Sunday (0),
@@ -17,6 +24,14 @@ function weeksFromYearStart(date) {
     return weekNumber - 1;
 }
 
+/**
+ * Generates an array of HSLA color strings with the specified number of colors.
+ * The colors are evenly distributed around the color wheel, with a fixed
+ * saturation and lightness, and an alpha value of 0.7.
+ *
+ * @param {number} numColors - The number of colors to generate.
+ * @returns {string[]} An array of HSLA color strings.
+ */
 function generateColorScale(numColors) {
     const colors = [];
     for (let i = 0; i < numColors; i++) {
@@ -54,6 +69,15 @@ function getGreenShade(pushUps) {
     return color;
 }
 
+/**
+ * Generates an activity chart on the provided canvas element based on the given data.
+ * The chart displays a grid of cells, where each cell represents a day and is colored
+ * based on the corresponding activity value.
+ *
+ * @param {Object[]} data - An array of objects, where each object represents an activity data point
+ *                         with a `date` and `value` property.
+ * @param {HTMLCanvasElement} canvas - The canvas element to render the activity chart on.
+ */
 function createActivityChart(data, canvas) {
     // Get the range of years
     var minYear = new Date(data[0].date).getFullYear();
