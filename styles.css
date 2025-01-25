@@ -62,15 +62,16 @@ tr:nth-child(even) {
 }
 
 .chart-container {
-    width: 45%;
+    width: 95%;
     min-width: 300px;
+    max-height: 250px;
 }
 
-#calendar  {
-	display: block;
-	box-sizing: border-box;
-	height: 150px;
-	width: 300px;
+#calendar {
+    display: block;
+    box-sizing: border-box;
+    height: 150px;
+    width: 300px;
 }
 
 .first-col-container {

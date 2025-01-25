@@ -114,6 +114,16 @@ function createOrUpdateCharts() {
 function createCharts() {
     const canvasChartPushUps = document.getElementById("push-up-chart");
     const shortFormattedDates = getShortFormattedDates();
+    const options = {
+        scales: {
+            y: {
+                beginAtZero: true
+            }
+        },
+        responsive: true,
+        maintainAspectRatio: false
+    };
+
     chartPushUpsTotal = new Chart(canvasChartPushUps, {
         type: "bar",
         data: {
@@ -126,13 +136,7 @@ function createCharts() {
                 borderWidth: 1,
             }]
         },
-        options: {
-            scales: {
-                y: {
-                    beginAtZero: true
-                }
-            }
-        }
+        options: options
     });
 
     const canvasChartPushUpsPerMinute = document.getElementById("push-up-per-minute-chart");
@@ -148,13 +152,7 @@ function createCharts() {
                 tension: 0.1,
             }]
         },
-        options: {
-            scales: {
-                y: {
-                    beginAtZero: true
-                }
-            }
-        }
+        options: options
     });
 
     const monthlyData = aggregateDataByMonth(pushUpsData);
