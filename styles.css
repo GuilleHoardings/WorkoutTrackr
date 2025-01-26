@@ -1,51 +1,120 @@
+/* General body and font styling */
 body {
     font-family: 'Montserrat', Arial, sans-serif;
     margin: 0;
     padding: 0;
+    background-color: #f4f4f9;
+    /* Slight background color to improve contrast */
 }
 
+/* Header styling */
 h1 {
     background-color: rgba(54, 69, 79, 1);
     color: white;
     margin: 0;
     padding: 15px;
+    font-size: 28px;
+    font-weight: 700;
 }
 
 .header {
     background-color: rgba(54, 69, 79, 1);
     display: flex;
     align-items: center;
+    justify-content: center;
 }
 
+/* Logo styling */
 #logo {
     width: 75px;
-    margin: 10px;
+    margin-right: 10px;
 }
 
+/* Main container layout */
 .container {
     display: flex;
+    justify-content: space-between;
+    padding: 20px;
 }
 
+/* Left-side content */
 .left-side {
     flex: 1;
     padding: 20px;
 }
 
+/* Right-side content with charts */
 .right-side {
     flex: 1;
     display: flex;
     flex-direction: column;
-    flex-wrap: wrap;
     align-items: flex-start;
     justify-content: flex-start;
     padding: 20px;
     background-color: #ffffff;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
 }
 
+/* Form styling */
 .push-up-form {
     margin-bottom: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
 }
 
+label {
+    font-size: 16px;
+    margin-bottom: 5px;
+    color: rgba(54, 69, 79, 1);
+    /* Matching the header color */
+}
+
+input[type="number"] {
+    padding: 10px;
+    font-size: 16px;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+input[type="submit"] {
+    padding: 12px 20px;
+    background-color: #4CAF50;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 16px;
+    transition: background-color 0.3s ease;
+    width: 100%;
+}
+
+input[type="submit"]:hover {
+    background-color: #45a049;
+}
+
+/* Button styling */
+button {
+    padding: 12px 20px;
+    background-color: #4CAF50;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 16px;
+    transition: background-color 0.3s ease;
+    width: 100%;
+    margin-top: 10px;
+    /* Adds space between buttons */
+}
+
+button:hover {
+    background-color: #45a049;
+}
+
+/* Table styling */
 table {
     width: 100%;
     border-collapse: collapse;
@@ -53,28 +122,45 @@ table {
 }
 
 td, th {
-    padding: 5px;
+    padding: 10px;
     text-align: center;
+    font-size: 16px;
+    color: rgba(54, 69, 79, 1);
+    /* Matching the header color */
 }
 
 tr:nth-child(even) {
     background-color: #f2f2f2;
 }
 
+/* Chart container styling */
 .chart-container {
     width: 95%;
     min-width: 300px;
     max-height: 250px;
+    margin-bottom: 20px;
 }
 
+/* Calendar chart */
 #calendar {
     display: block;
     box-sizing: border-box;
     height: 150px;
-    width: 300px;
+    width: 100%;
+    margin-bottom: 20px;
 }
 
+/* Layout for the form container */
 .first-col-container {
     display: flex;
     justify-content: space-between;
+}
+
+/* Miscellaneous improvements */
+button, input[type="submit"] {
+    width: auto;
+}
+
+input[type="file"] {
+    display: none;
 }
