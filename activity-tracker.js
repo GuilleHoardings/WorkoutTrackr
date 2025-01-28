@@ -45,7 +45,7 @@ function getGreenShadeDiscrete(pushUps) {
     // Return green, but it make it proportional to the push-up count, with a
     // maximum of 120. The hihger the push-up count, the darker the shade of
     // green. Using github's color scale.
-    var maxPushUps = 120;
+    var maxPushUps = 160;
     var color = '#ebedf0';
     if (pushUps > 0) {
         var colors = ['#ffffff', '#d8f0b1', '#96e08e', '#2dbf55', '#1e763e', '#0e6630', '#08401a']
@@ -55,7 +55,7 @@ function getGreenShadeDiscrete(pushUps) {
 }
 
 function getGreenShade(pushUps) {
-    var maxPushUps = 120;
+    var maxPushUps = 160;
     var minLightness = 10;
     var maxLightness = 70;
 
