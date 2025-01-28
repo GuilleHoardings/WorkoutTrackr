@@ -100,13 +100,13 @@ function createActivityChart(data, canvas) {
     // Define an array of month names each two months
     var monthNames = ['Jan', 'Mar', 'May', 'Jul', 'Sep', 'Nov']
 
-    // Draw the years in reverse order
-    for (var absYear = maxYear; absYear >= minYear; absYear--) {
-        // Print the year
-        var year = absYear - minYear;
+    // Draw the years 
+    for (var absYear = minYear; absYear <= maxYear; absYear++) {
+        // Print the year labels
+        var relativeYear = maxYear - absYear;
         ctx.fillStyle = '#888';
         ctx.font = 'bold 10px sans-serif';
-        yYearStart = year * yearHeight + (year + 1) * yearPadding + yearTextSize + monthTextSize;
+        yYearStart = relativeYear * yearHeight + (relativeYear + 1) * yearPadding + yearTextSize + monthTextSize;
         ctx.fillText(absYear, padding, yYearStart - monthTextSize);
 
         // Draw the grid
@@ -144,7 +144,7 @@ function createActivityChart(data, canvas) {
 
     for (var i = 0; i < data.length; i++) {
         var date = new Date(data[i].date);
-        var year = date.getFullYear();
+        var relativeYear = maxYear - date.getFullYear();
         var dayOfWeekIndex = date.getDay();
         if (dayOfWeekIndex === 0) {
             dayOfWeekIndex = 6;
@@ -153,7 +153,7 @@ function createActivityChart(data, canvas) {
         }
         var week = weeksFromYearStart(date);
         var x = week * cellSize + padding * (week + 1);
-        var y = dayOfWeekIndex * cellSize + padding * (dayOfWeekIndex + 1) + (year - minYear) * yearHeight + (year - minYear + 1) * yearPadding + yearTextSize + monthTextSize;
+        var y = dayOfWeekIndex * cellSize + padding * (dayOfWeekIndex + 1) + relativeYear * yearHeight + (relativeYear + 1) * yearPadding + yearTextSize + monthTextSize;
 
         // Store cell data with its position and dimensions
         cellMap.set(`${x},${y}`, {
