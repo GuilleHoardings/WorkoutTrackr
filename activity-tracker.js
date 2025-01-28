@@ -80,80 +80,79 @@ function getGreenShade(pushUps) {
  */
 function createActivityChart(data, canvas) {
     // Get the range of years
-    var minYear = new Date(data[0].date).getFullYear();
-    var maxYear = new Date(data[data.length - 1].date).getFullYear();
-    var numYears = maxYear - minYear + 1;
+    const minYear = new Date(data[0].date).getFullYear();
+    const maxYear = new Date(data[data.length - 1].date).getFullYear();
+    const numYears = maxYear - minYear + 1;
 
     var ctx = canvas.getContext('2d');
 
-    var cellSize = 10;
-    var padding = 2;
-    var yearPadding = 10;
-    var yearTextSize = 25;
-    var monthTextSize = 15;
-    var yearWidth = 53 * cellSize + padding * 54;
-    var yearHeight = 7 * cellSize + padding * 8 + yearTextSize + monthTextSize;
+    const cellSize = 10;
+    const padding = 2;
+    const yearPadding = 10;
+    const yearTextSize = 25;
+    const monthTextSize = 15;
+    const yearWidth = 53 * cellSize + padding * 54;
+    const yearHeight = 7 * cellSize + padding * 8 + yearTextSize + monthTextSize;
 
     canvas.width = yearWidth;
     canvas.height = numYears * yearHeight + yearPadding * 4;
 
     // Define an array of month names each two months
-    var monthNames = ['Jan', 'Mar', 'May', 'Jul', 'Sep', 'Nov']
+    const monthNames = ['Jan', 'Mar', 'May', 'Jul', 'Sep', 'Nov']
 
-    // Draw the years 
     for (var absYear = minYear; absYear <= maxYear; absYear++) {
-        // Print the year labels
-        var relativeYear = maxYear - absYear;
-        ctx.fillStyle = '#888';
-        ctx.font = 'bold 10px sans-serif';
-        yYearStart = relativeYear * yearHeight + (relativeYear + 1) * yearPadding + yearTextSize + monthTextSize;
-        ctx.fillText(absYear, padding, yYearStart - monthTextSize);
-
-        // Draw the grid
-        for (var i = 0; i < 53; i++) {
-            // Draw the month names
-            if (i % 9 === 0) {
-                var month = Math.floor(i / 9);
-                ctx.fillStyle = '#888';
-                ctx.font = 'bold 10px sans-serif';
-                ctx.fillText(monthNames[month], i * cellSize + padding * (i + 1), yYearStart);
-            }
-
-            ctx.fillStyle = '#ddd';
-            for (var j = 0; j < 7; j++) {
-                var x = i * cellSize + padding * (i + 1);
-                var y = j * cellSize + padding * (j + 1) + yYearStart;
-                ctx.fillRect(x, y, cellSize, cellSize);
-            }
-        }
+        printYearLabels();
+        drawGrid();
     }
 
     // Create a map to store cell data
     const cellMap = new Map();
 
-    // Create tooltip once
-    let tooltip = document.createElement('div');
-    tooltip.style.position = 'absolute';
-    tooltip.style.display = 'none';
-    tooltip.style.background = 'rgba(0, 0, 0, 0.8)';
-    tooltip.style.color = 'white';
-    tooltip.style.padding = '5px';
-    tooltip.style.borderRadius = '3px';
-    tooltip.style.fontSize = '12px';
-    document.body.appendChild(tooltip);
+    // Create a tooltip element
+    let tooltip = createTooltip();
 
-    for (var i = 0; i < data.length; i++) {
-        var date = new Date(data[i].date);
-        var relativeYear = maxYear - date.getFullYear();
-        var dayOfWeekIndex = date.getDay();
-        if (dayOfWeekIndex === 0) {
-            dayOfWeekIndex = 6;
-        } else {
-            dayOfWeekIndex--;
-        }
-        var week = weeksFromYearStart(date);
-        var x = week * cellSize + padding * (week + 1);
-        var y = dayOfWeekIndex * cellSize + padding * (dayOfWeekIndex + 1) + relativeYear * yearHeight + (relativeYear + 1) * yearPadding + yearTextSize + monthTextSize;
+    for (let i = 0; i < data.length; i++) {
+        drawActivityCell(data[i]);
+    }
+
+    initTooltipEventHandlers();
+
+    canvas.addEventListener('mouseout', function () {
+        tooltip.style.display = 'none';
+    });
+
+    function initTooltipEventHandlers() {
+        canvas.addEventListener('mousemove', function (e) {
+            const rect = canvas.getBoundingClientRect();
+            const mouseX = e.clientX - rect.left;
+            const mouseY = e.clientY - rect.top;
+
+            // Check each cell in our map
+            let found = false;
+            cellMap.forEach((cell) => {
+                if (mouseX >= cell.x && mouseX <= cell.x + cell.width &&
+                    mouseY >= cell.y && mouseY <= cell.y + cell.height) {
+                    tooltip.style.display = 'block';
+                    tooltip.style.left = (e.pageX + 10) + 'px';
+                    tooltip.style.top = (e.pageY + 10) + 'px';
+                    tooltip.innerHTML = `Date: ${cell.date.toLocaleDateString()}<br>Value: ${cell.cellValue}`;
+                    found = true;
+                }
+            });
+
+            if (!found) {
+                tooltip.style.display = 'none';
+            }
+        });
+    }
+
+    function drawActivityCell(cellData) {
+        const date = new Date(cellData.date);
+        const relativeYear = maxYear - date.getFullYear();
+        let dayOfWeekIndex = computeDayOfWeekIndex(date);
+        const week = weeksFromYearStart(date);
+        const x = week * cellSize + padding * (week + 1);
+        const y = dayOfWeekIndex * cellSize + padding * (dayOfWeekIndex + 1) + relativeYear * yearHeight + (relativeYear + 1) * yearPadding + yearTextSize + monthTextSize;
 
         // Store cell data with its position and dimensions
         cellMap.set(`${x},${y}`, {
@@ -162,38 +161,61 @@ function createActivityChart(data, canvas) {
             width: cellSize,
             height: cellSize,
             date: date,
-            cellValue: data[i].value
+            cellValue: cellData.value
         });
 
-        var color = getGreenShade(data[i].value);
+        var color = getGreenShade(cellData.value);
         ctx.fillStyle = color;
         ctx.fillRect(x, y, cellSize, cellSize);
     }
 
-    canvas.addEventListener('mousemove', function (e) {
-        const rect = canvas.getBoundingClientRect();
-        const mouseX = e.clientX - rect.left;
-        const mouseY = e.clientY - rect.top;
-
-        // Check each cell in our map
-        let found = false;
-        cellMap.forEach((cell) => {
-            if (mouseX >= cell.x && mouseX <= cell.x + cell.width &&
-                mouseY >= cell.y && mouseY <= cell.y + cell.height) {
-                tooltip.style.display = 'block';
-                tooltip.style.left = (e.pageX + 10) + 'px';
-                tooltip.style.top = (e.pageY + 10) + 'px';
-                tooltip.innerHTML = `Date: ${cell.date.toLocaleDateString()}<br>Value: ${cell.cellValue}`;
-                found = true;
-            }
-        });
-
-        if (!found) {
-            tooltip.style.display = 'none';
+    function computeDayOfWeekIndex(date) {
+        let dayOfWeekIndex = date.getDay();
+        if (dayOfWeekIndex === 0) {
+            dayOfWeekIndex = 6;
+        } else {
+            dayOfWeekIndex--;
         }
-    });
+        return dayOfWeekIndex;
+    }
 
-    canvas.addEventListener('mouseout', function () {
+    function createTooltip() {
+        let tooltip = document.createElement('div');
+        tooltip.style.position = 'absolute';
         tooltip.style.display = 'none';
-    });
+        tooltip.style.background = 'rgba(0, 0, 0, 0.8)';
+        tooltip.style.color = 'white';
+        tooltip.style.padding = '5px';
+        tooltip.style.borderRadius = '3px';
+        tooltip.style.fontSize = '12px';
+        document.body.appendChild(tooltip);
+        return tooltip;
+    }
+
+    function printYearLabels() {
+        const relativeYear = maxYear - absYear;
+        ctx.fillStyle = '#888';
+        ctx.font = 'bold 10px sans-serif';
+        yYearStart = relativeYear * yearHeight + (relativeYear + 1) * yearPadding + yearTextSize + monthTextSize;
+        ctx.fillText(absYear, padding, yYearStart - monthTextSize);
+    }
+
+    function drawGrid() {
+        for (var i = 0; i < 53; i++) {
+            // Draw the month names
+            if (i % 9 === 0) {
+                const month = Math.floor(i / 9);
+                ctx.fillStyle = '#888';
+                ctx.font = 'bold 10px sans-serif';
+                ctx.fillText(monthNames[month], i * cellSize + padding * (i + 1), yYearStart);
+            }
+
+            ctx.fillStyle = '#ddd';
+            for (var j = 0; j < 7; j++) {
+                const x = i * cellSize + padding * (i + 1);
+                const y = j * cellSize + padding * (j + 1) + yYearStart;
+                ctx.fillRect(x, y, cellSize, cellSize);
+            }
+        }
+    }
 }
