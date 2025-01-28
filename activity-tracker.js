@@ -100,9 +100,6 @@ function createActivityChart(data, canvas) {
     canvas.width = yearWidth;
     canvas.height = numYears * yearHeight + yearPadding * 4;
 
-    // Define an array of month names each two months
-    const monthNames = ['Jan', 'Mar', 'May', 'Jul', 'Sep', 'Nov']
-
     for (var absYear = minYear; absYear <= maxYear; absYear++) {
         const relativeYear = maxYear - absYear;
         const yYearStart = relativeYear * yearHeight + (relativeYear + 1) * yearPadding + yearLabelHeight;
@@ -203,6 +200,9 @@ function createActivityChart(data, canvas) {
     }
 
     function drawGrid(yYearStart) {
+        // Define an array of month names each two months
+        const monthNames = ['Jan', 'Mar', 'May', 'Jul', 'Sep', 'Nov']
+
         for (var i = 0; i < 53; i++) {
             // Draw the month names
             if (i % 9 === 0) {
