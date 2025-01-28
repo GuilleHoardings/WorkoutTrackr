@@ -91,8 +91,11 @@ function createActivityChart(data, canvas) {
     const yearPadding = 10;
     const yearTextSize = 25;
     const monthTextSize = 15;
-    const yearWidth = 53 * cellSize + padding * 54;
-    const yearHeight = 7 * cellSize + padding * 8 + yearTextSize + monthTextSize;
+    const weeksInYear = 53;
+    const daysInWeek = 7;
+    const yearLabelHeight = yearTextSize + monthTextSize;
+    const yearWidth = weeksInYear * cellSize + padding * (weeksInYear + 1);
+    const yearHeight = daysInWeek * cellSize + padding * (daysInWeek + 1) + yearLabelHeight;
 
     canvas.width = yearWidth;
     canvas.height = numYears * yearHeight + yearPadding * 4;
@@ -101,8 +104,10 @@ function createActivityChart(data, canvas) {
     const monthNames = ['Jan', 'Mar', 'May', 'Jul', 'Sep', 'Nov']
 
     for (var absYear = minYear; absYear <= maxYear; absYear++) {
-        printYearLabels();
-        drawGrid();
+        const relativeYear = maxYear - absYear;
+        const yYearStart = relativeYear * yearHeight + (relativeYear + 1) * yearPadding + yearLabelHeight;
+        printYearLabels(yYearStart);
+        drawGrid(yYearStart);
     }
 
     // Create a map to store cell data
@@ -152,7 +157,7 @@ function createActivityChart(data, canvas) {
         let dayOfWeekIndex = computeDayOfWeekIndex(date);
         const week = weeksFromYearStart(date);
         const x = week * cellSize + padding * (week + 1);
-        const y = dayOfWeekIndex * cellSize + padding * (dayOfWeekIndex + 1) + relativeYear * yearHeight + (relativeYear + 1) * yearPadding + yearTextSize + monthTextSize;
+        const y = dayOfWeekIndex * cellSize + padding * (dayOfWeekIndex + 1) + relativeYear * yearHeight + (relativeYear + 1) * yearPadding + yearLabelHeight;
 
         // Store cell data with its position and dimensions
         cellMap.set(`${x},${y}`, {
@@ -172,11 +177,10 @@ function createActivityChart(data, canvas) {
     function computeDayOfWeekIndex(date) {
         let dayOfWeekIndex = date.getDay();
         if (dayOfWeekIndex === 0) {
-            dayOfWeekIndex = 6;
+            return 6;
         } else {
-            dayOfWeekIndex--;
+            return dayOfWeekIndex - 1;
         }
-        return dayOfWeekIndex;
     }
 
     function createTooltip() {
@@ -192,15 +196,13 @@ function createActivityChart(data, canvas) {
         return tooltip;
     }
 
-    function printYearLabels() {
-        const relativeYear = maxYear - absYear;
+    function printYearLabels(yYearStart) {
         ctx.fillStyle = '#888';
         ctx.font = 'bold 10px sans-serif';
-        yYearStart = relativeYear * yearHeight + (relativeYear + 1) * yearPadding + yearTextSize + monthTextSize;
         ctx.fillText(absYear, padding, yYearStart - monthTextSize);
     }
 
-    function drawGrid() {
+    function drawGrid(yYearStart) {
         for (var i = 0; i < 53; i++) {
             // Draw the month names
             if (i % 9 === 0) {
