@@ -7,9 +7,27 @@ const pushUpsInput = document.getElementById("push-ups");
 let pushUpsData = [];
 let chartPushUpsTotal, chartPushUpsPerMinute, chartPushUpsPerMonth, chartActivity;
 
+// Add a version number to the data format
+const DATA_VERSION = 1;
+
 // Load previously stored data from localStorage
 if (localStorage.getItem("pushUpsData")) {
-    pushUpsData = JSON.parse(localStorage.getItem("pushUpsData"));
+    const storedData = JSON.parse(localStorage.getItem("pushUpsData"));
+
+    // Check if the stored data is an array (old format)
+    if (Array.isArray(storedData)) {
+        // Convert old format to new format
+        const migratedData = {
+            version: DATA_VERSION,
+            data: storedData
+        };
+        localStorage.setItem("pushUpsData", JSON.stringify(migratedData));
+        pushUpsData = migratedData.data;
+    } else {
+        // Use the new format
+        pushUpsData = storedData.data || [];
+    }
+
     pushUpsData.forEach(data => addRowToTable(data));
     createOrUpdateCharts();
 }
@@ -42,8 +60,12 @@ pushUpForm.addEventListener("submit", (e) => {
         pushUpsData.push(pushUpData);
     }
 
-    // Save to the localStorage
-    localStorage.setItem("pushUpsData", JSON.stringify(pushUpsData));
+    // Save to the localStorage with the new format
+    const dataToSave = {
+        version: DATA_VERSION,
+        data: pushUpsData
+    };
+    localStorage.setItem("pushUpsData", JSON.stringify(dataToSave));
 
     // Clear and repopulate the table rows
     while (pushUpTable.rows.length > 1) {
@@ -264,17 +286,23 @@ function updateCharts() {
 }
 
 function createPushUpActivityChart() {
-    const pushUpsData = JSON.parse(localStorage.getItem('pushUpsData'));
-    const activityData = pushUpsData.map(item => ({
+    const storedData = JSON.parse(localStorage.getItem('pushUpsData'));
+
+    // Handle the new data format
+    const activityData = (storedData.data || []).map(item => ({
         date: item.date,
         value: item.pushUps
     }));
+
     const canvas = document.getElementById('activity');
     createActivityChart(activityData, canvas);
 }
 
 document.getElementById('download-csv').addEventListener('click', function () {
-    var jsonData = JSON.parse(localStorage.getItem('pushUpsData'));
+    const storedData = JSON.parse(localStorage.getItem('pushUpsData'));
+
+    // Extract data array from the new format
+    const jsonData = Array.isArray(storedData) ? storedData : (storedData.data || []);
 
     // Convert JSON data to CSV data
     var data = jsonData.map(row => [row.date, row.pushUps, row.timeBetweenFirstAndLast]);
@@ -325,8 +353,12 @@ function importCSV(replace = false) {
             pushUpsData = pushUpsData.concat(parsedData);
         }
 
-        // Save to localStorage
-        localStorage.setItem("pushUpsData", JSON.stringify(pushUpsData));
+        // Save to localStorage using the new format
+        const dataToSave = {
+            version: DATA_VERSION,
+            data: pushUpsData
+        };
+        localStorage.setItem("pushUpsData", JSON.stringify(dataToSave));
 
         // Clear and repopulate the table
         while (pushUpTable.rows.length > 1) {
