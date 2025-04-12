@@ -7,29 +7,133 @@ const pushUpsInput = document.getElementById("push-ups");
 let pushUpsData = [];
 let chartPushUpsTotal, chartPushUpsPerMinute, chartPushUpsPerMonth, chartActivity;
 
-// Add a version number to the data format
-const DATA_VERSION = 1;
+// Add version numbers for data format
+const DATA_VERSION_V1 = 1;
+const DATA_VERSION_V2 = 2;
+const CURRENT_DATA_VERSION = DATA_VERSION_V2;
 
 // Load previously stored data from localStorage
 if (localStorage.getItem("pushUpsData")) {
     const storedData = JSON.parse(localStorage.getItem("pushUpsData"));
 
-    // Check if the stored data is an array (old format)
+    // Check if the stored data is an array (original format)
     if (Array.isArray(storedData)) {
-        // Convert old format to new format
-        const migratedData = {
-            version: DATA_VERSION,
-            data: storedData
-        };
+        // Convert original format to v2 format with series
+        const migratedData = migrateArrayToV2Format(storedData);
         localStorage.setItem("pushUpsData", JSON.stringify(migratedData));
         pushUpsData = migratedData.data;
-    } else {
-        // Use the new format
+    }
+    // Check if it's v1 format
+    else if (storedData.version === DATA_VERSION_V1) {
+        // Convert v1 format to v2 format with series
+        const migratedData = migrateV1ToV2Format(storedData);
+        localStorage.setItem("pushUpsData", JSON.stringify(migratedData));
+        pushUpsData = migratedData.data;
+    }
+    // Already v2 format
+    else if (storedData.version === DATA_VERSION_V2) {
         pushUpsData = storedData.data || [];
+    }
+    // Unknown format - use empty array
+    else {
+        pushUpsData = [];
     }
 
     pushUpsData.forEach(data => addRowToTable(data));
     createOrUpdateCharts();
+}
+
+// Migration functions
+function migrateArrayToV2Format(oldData) {
+    // Transform original array format to v2 format with series
+    const workouts = [];
+
+    oldData.forEach(entry => {
+        const date = new Date(entry.date);
+        const dateString = date.toISOString().split('T')[0]; // YYYY-MM-DD
+
+        // Calculate 4 equal series for the existing data
+        const repsPerSeries = Math.ceil(entry.pushUps / 4);
+        const seriesTimeGap = Math.floor(entry.timeBetweenFirstAndLast / 4);
+
+        const series = [];
+        for (let i = 0; i < 4; i++) {
+            // Last series might have fewer reps to match the total
+            const reps = (i === 3) ?
+                entry.pushUps - (repsPerSeries * 3) :
+                repsPerSeries;
+
+            if (reps <= 0) continue; // Skip if no reps for this series
+
+            const seriesTime = new Date(date.getTime() + (i * seriesTimeGap * 60000));
+
+            series.push({
+                reps: reps,
+                weight: null, // No weight data in original format
+                timestamp: seriesTime
+            });
+        }
+
+        workouts.push({
+            date: date,
+            dateString: dateString,
+            exercise: "Push-ups",
+            series: series,
+            totalTime: entry.timeBetweenFirstAndLast,
+            totalReps: entry.pushUps
+        });
+    });
+
+    return {
+        version: DATA_VERSION_V2,
+        data: workouts
+    };
+}
+
+function migrateV1ToV2Format(oldData) {
+    // Transform v1 format to v2 format with series
+    const workouts = [];
+
+    oldData.data.forEach(entry => {
+        const date = new Date(entry.date);
+        const dateString = date.toISOString().split('T')[0]; // YYYY-MM-DD
+
+        // Calculate 4 equal series for the existing data
+        const repsPerSeries = Math.ceil(entry.pushUps / 4);
+        const seriesTimeGap = Math.floor(entry.timeBetweenFirstAndLast / 4);
+
+        const series = [];
+        for (let i = 0; i < 4; i++) {
+            // Last series might have fewer reps to match the total
+            const reps = (i === 3) ?
+                entry.pushUps - (repsPerSeries * 3) :
+                repsPerSeries;
+
+            if (reps <= 0) continue; // Skip if no reps for this series
+
+            const seriesTime = new Date(date.getTime() + (i * seriesTimeGap * 60000));
+
+            series.push({
+                reps: reps,
+                weight: null, // No weight data in v1 format
+                timestamp: seriesTime
+            });
+        }
+
+        workouts.push({
+            date: date,
+            dateString: dateString,
+            exercise: "Push-ups",
+            series: series,
+            totalTime: entry.timeBetweenFirstAndLast,
+            totalReps: entry.pushUps
+        });
+    });
+
+    return {
+        version: DATA_VERSION_V2,
+        data: workouts
+    };
 }
 
 // Listen to the form's submit event
@@ -39,30 +143,49 @@ pushUpForm.addEventListener("submit", (e) => {
     // Get push-up count from the input field
     const pushUps = parseInt(pushUpsInput.value);
     const newEntryTime = new Date();
-
-    // Remove the time part from the submitted entry time to compare only the date part
-    const entryDate = new Date(newEntryTime);
+    const dateString = newEntryTime.toISOString().split('T')[0]; // YYYY-MM-DD
 
     // Check if an entry with the current date already exists in the array
-    const existingEntry = pushUpsData.find(data => new Date(data.date).setHours(0, 0, 0, 0) === entryDate.setHours(0, 0, 0, 0));
+    const existingWorkout = pushUpsData.find(workout => workout.dateString === dateString);
 
-    if (existingEntry) {
-        // If an entry exists, update the push-up count and timeBetweenFirstAndLast
-        existingEntry.pushUps += pushUps;
-        existingEntry.timeBetweenFirstAndLast = Math.round((newEntryTime.getTime() - new Date(existingEntry.date).getTime()) / 60000);
-    } else {
-        // Create a new data object and push it into the array
-        const pushUpData = {
-            date: newEntryTime,
-            pushUps: pushUps,
-            timeBetweenFirstAndLast: 0
+    if (existingWorkout) {
+        // If a workout exists for today, add a new series to it
+        const newSeries = {
+            reps: pushUps,
+            weight: null, // No weight for push-ups in this version
+            timestamp: newEntryTime
         };
-        pushUpsData.push(pushUpData);
+
+        existingWorkout.series.push(newSeries);
+
+        // Update the totals
+        existingWorkout.totalReps += pushUps;
+
+        // Calculate total time between first and last series
+        const firstSeriesTime = new Date(existingWorkout.series[0].timestamp).getTime();
+        const lastSeriesTime = newEntryTime.getTime();
+        existingWorkout.totalTime = Math.round((lastSeriesTime - firstSeriesTime) / 60000);
+    } else {
+        // Create a new workout for today
+        const newWorkout = {
+            date: newEntryTime,
+            dateString: dateString,
+            exercise: "Push-ups",
+            series: [{
+                reps: pushUps,
+                weight: null,
+                timestamp: newEntryTime
+            }],
+            totalTime: 0, // First series, so no time elapsed yet
+            totalReps: pushUps
+        };
+
+        pushUpsData.push(newWorkout);
     }
 
-    // Save to the localStorage with the new format
+    // Save to localStorage using the new format
     const dataToSave = {
-        version: DATA_VERSION,
+        version: CURRENT_DATA_VERSION,
         data: pushUpsData
     };
     localStorage.setItem("pushUpsData", JSON.stringify(dataToSave));
@@ -72,12 +195,15 @@ pushUpForm.addEventListener("submit", (e) => {
         pushUpTable.deleteRow(-1);
     }
 
-    pushUpsData.forEach(data => {
-        addRowToTable(data);
+    pushUpsData.forEach(workout => {
+        addRowToTable(workout);
     });
 
     // Update the charts
     createOrUpdateCharts();
+
+    // Clear the input field
+    pushUpsInput.value = "";
 });
 
 function createLongFormattedDate(date) {
@@ -95,29 +221,47 @@ function createShortFormattedDate(date) {
     return new Intl.DateTimeFormat().format(date);
 }
 
-function addRowToTable(data) {
+function addRowToTable(workout) {
     const row = pushUpTable.insertRow(1);
     const dateCell = row.insertCell(0);
     const pushUpsCell = row.insertCell(1);
     const timeCell = row.insertCell(2);
     const pushUpsPerMinuteCell = row.insertCell(3);
+    const seriesCell = row.insertCell(4);
 
     // Format and display the data in the table
-    dateCell.innerHTML = createLongFormattedDate(new Date(data.date));
-    pushUpsCell.innerHTML = data.pushUps;
-    timeCell.innerHTML = data.timeBetweenFirstAndLast + ' minutes';
-    pushUpsPerMinuteCell.innerHTML = (data.pushUps / data.timeBetweenFirstAndLast).toFixed(2);
+    dateCell.innerHTML = createLongFormattedDate(new Date(workout.date));
+    pushUpsCell.innerHTML = workout.totalReps;
+
+    // Handle time display - show 0 minutes for workouts with only one series
+    const displayTime = workout.totalTime || 0;
+    timeCell.innerHTML = displayTime + ' minutes';
+
+    // Calculate push-ups per minute (if time > 0)
+    const pushUpsPerMinute = displayTime > 0 ?
+        (workout.totalReps / displayTime).toFixed(2) :
+        'N/A';
+    pushUpsPerMinuteCell.innerHTML = pushUpsPerMinute;
+
+    // Create series display
+    let seriesHtml = '<ul class="series-list">';
+    workout.series.forEach((series, index) => {
+        const seriesTime = new Date(series.timestamp);
+        seriesHtml += `<li>Series ${index + 1}: ${series.reps} reps - ${seriesTime.toLocaleTimeString()}</li>`;
+    });
+    seriesHtml += '</ul>';
+    seriesCell.innerHTML = seriesHtml;
 }
 
 function aggregateDataByMonth(data) {
     const monthlyData = {};
-    data.forEach(entry => {
-        const date = new Date(entry.date);
+    data.forEach(workout => {
+        const date = new Date(workout.date);
         const key = `${date.getFullYear()}-${date.getMonth() + 1}`;
         if (!monthlyData[key]) {
             monthlyData[key] = { year: date.getFullYear(), month: date.getMonth() + 1, pushUps: 0 };
         }
-        monthlyData[key].pushUps += entry.pushUps;
+        monthlyData[key].pushUps += workout.totalReps;
     });
     return Object.values(monthlyData).sort((a, b) => {
         return a.year - b.year || a.month - b.month;
@@ -168,7 +312,7 @@ function createCharts() {
             labels: shortFormattedDates,
             datasets: [{
                 label: "Push ups per minute",
-                data: pushUpsData.map(data => data.pushUps / data.timeBetweenFirstAndLast),
+                data: getPushUpsPerMinute(),
                 fill: false,
                 borderColor: "rgba(255, 99, 132, 1)",
                 tension: 0.1,
@@ -234,15 +378,18 @@ function createCharts() {
 }
 
 function getPushUpsPerDate() {
-    return pushUpsData.map(data => data.pushUps);
+    return pushUpsData.map(workout => workout.totalReps);
 }
 
 function getShortFormattedDates() {
-    return pushUpsData.map(data => createShortFormattedDate(new Date(data.date)));
+    return pushUpsData.map(workout => createShortFormattedDate(new Date(workout.date)));
 }
 
 function getPushUpsPerMinute() {
-    return pushUpsData.map(data => data.pushUps / data.timeBetweenFirstAndLast);
+    return pushUpsData.map(workout => {
+        const time = workout.totalTime || 1; // Avoid division by zero
+        return workout.totalReps / time;
+    });
 }
 
 function updateCharts() {
@@ -288,10 +435,13 @@ function updateCharts() {
 function createPushUpActivityChart() {
     const storedData = JSON.parse(localStorage.getItem('pushUpsData'));
 
-    // Handle the new data format
-    const activityData = (storedData.data || []).map(item => ({
-        date: item.date,
-        value: item.pushUps
+    // Handle the new data format with workouts and series
+    const workouts = Array.isArray(storedData) ? storedData : (storedData.data || []);
+
+    // Map workouts to activity data format
+    const activityData = workouts.map(workout => ({
+        date: workout.date,
+        value: workout.totalReps
     }));
 
     const canvas = document.getElementById('activity');
@@ -302,36 +452,139 @@ document.getElementById('download-csv').addEventListener('click', function () {
     const storedData = JSON.parse(localStorage.getItem('pushUpsData'));
 
     // Extract data array from the new format
-    const jsonData = Array.isArray(storedData) ? storedData : (storedData.data || []);
+    const workouts = Array.isArray(storedData) ? storedData : (storedData.data || []);
 
-    // Convert JSON data to CSV data
-    var data = jsonData.map(row => [row.date, row.pushUps, row.timeBetweenFirstAndLast]);
-    data.unshift(['Date', 'Push Ups', 'Time Between First and Last']); // Add header row
+    // Convert to CSV format - now including series information
+    let csvRows = [
+        ['Workout Date', 'Exercise', 'Series Number', 'Reps', 'Weight', 'Series Time', 'Total Workout Reps', 'Total Workout Time (min)']
+    ];
 
-    var csv = data.map(row => row.join(',')).join('\n');
+    workouts.forEach(workout => {
+        const workoutDate = new Date(workout.date);
+        const totalReps = workout.totalReps ||
+            workout.series.reduce((sum, series) => sum + series.reps, 0);
+
+        // Add each series as a separate row
+        workout.series.forEach((series, index) => {
+            const seriesTime = new Date(series.timestamp);
+            csvRows.push([
+                workoutDate.toISOString(),
+                workout.exercise,
+                index + 1,
+                series.reps,
+                series.weight || 'BW', // BW for bodyweight (null weight)
+                seriesTime.toISOString(),
+                totalReps,
+                workout.totalTime || 0
+            ]);
+        });
+    });
+
+    var csv = csvRows.map(row => row.join(',')).join('\n');
     var csvContent = 'data:text/csv;charset=utf-8,' + csv;
     var encodedUri = encodeURI(csvContent);
     var link = document.createElement('a');
     link.setAttribute('href', encodedUri);
-    link.setAttribute('download', 'pushUpsData.csv');
-    document.body.appendChild(link); // Required for Firefox
-    link.click(); // This will download the data file named "pushUpsData.csv".
+    link.setAttribute('download', 'workout_data.csv');
+    document.body.appendChild(link);
+    link.click();
 });
 
 function parseCSVData(csvData) {
     const rows = csvData.split('\n');
     const parsedData = [];
 
-    // Skip the header row
-    for (let i = 1; i < rows.length; i++) {
-        const columns = rows[i].split(',');
-        if (columns.length === 3) {
-            const pushUpData = {
-                date: new Date(columns[0]),
-                pushUps: parseInt(columns[1]),
-                timeBetweenFirstAndLast: parseInt(columns[2])
-            };
-            parsedData.push(pushUpData);
+    // Check the header to determine the CSV format
+    const header = rows[0].split(',');
+
+    // New format - has 8 columns including series data
+    if (header.length >= 7 && header.includes('Series Number')) {
+        // Process as new format with series
+        const workoutMap = new Map(); // Map to group series by workout date
+
+        // Skip header row
+        for (let i = 1; i < rows.length; i++) {
+            const columns = rows[i].split(',');
+            if (columns.length >= 7) {
+                const workoutDate = new Date(columns[0]);
+                const dateString = workoutDate.toISOString().split('T')[0];
+                const exercise = columns[1];
+                const seriesNumber = parseInt(columns[2]);
+                const reps = parseInt(columns[3]);
+                const weight = columns[4] === 'BW' ? null : parseFloat(columns[4]);
+                const seriesTime = new Date(columns[5]);
+                const totalReps = parseInt(columns[6]);
+                const totalTime = columns.length >= 8 ? parseInt(columns[7]) : 0;
+
+                // Create or update the workout in the map
+                if (!workoutMap.has(dateString)) {
+                    workoutMap.set(dateString, {
+                        date: workoutDate,
+                        dateString: dateString,
+                        exercise: exercise,
+                        series: [],
+                        totalReps: totalReps,
+                        totalTime: totalTime
+                    });
+                }
+
+                // Add the series to the workout
+                const workout = workoutMap.get(dateString);
+                workout.series.push({
+                    reps: reps,
+                    weight: weight,
+                    timestamp: seriesTime
+                });
+            }
+        }
+
+        // Convert the map to an array
+        return Array.from(workoutMap.values());
+    }
+    // Old format - 3 columns: date, pushUps, timeBetweenFirstAndLast
+    else if (header.length >= 3) {
+        // Process as old format and convert to new format
+        for (let i = 1; i < rows.length; i++) {
+            const columns = rows[i].split(',');
+            if (columns.length >= 3) {
+                const date = new Date(columns[0]);
+                const pushUps = parseInt(columns[1]);
+                const timeBetweenFirstAndLast = parseInt(columns[2]);
+
+                // Convert to v2 format with series
+                const dateString = date.toISOString().split('T')[0];
+
+                // Calculate 4 equal series for the data
+                const repsPerSeries = Math.ceil(pushUps / 4);
+                const seriesTimeGap = Math.floor(timeBetweenFirstAndLast / 4);
+
+                const series = [];
+                for (let j = 0; j < 4; j++) {
+                    // Last series might have fewer reps to match total
+                    const reps = (j === 3) ?
+                        pushUps - (repsPerSeries * 3) :
+                        repsPerSeries;
+
+                    if (reps <= 0) continue;
+
+                    const seriesTime = new Date(date.getTime() + (j * seriesTimeGap * 60000));
+
+                    series.push({
+                        reps: reps,
+                        weight: null,
+                        timestamp: seriesTime
+                    });
+                }
+
+                parsedData.push({
+                    date: date,
+                    dateString: dateString,
+                    exercise: "Push-ups",
+                    series: series,
+                    totalTime: timeBetweenFirstAndLast,
+                    totalReps: pushUps
+                });
+            }
         }
     }
 
@@ -355,7 +608,7 @@ function importCSV(replace = false) {
 
         // Save to localStorage using the new format
         const dataToSave = {
-            version: DATA_VERSION,
+            version: CURRENT_DATA_VERSION,
             data: pushUpsData
         };
         localStorage.setItem("pushUpsData", JSON.stringify(dataToSave));
