@@ -15,20 +15,36 @@ const DATA_VERSION_V2 = 2; // Series support
 const DATA_VERSION_V3 = 3; // Multiple exercise types support
 const CURRENT_DATA_VERSION = DATA_VERSION_V3;
 
-// Load previously stored data from localStorage
-if (localStorage.getItem("workoutData")) {
-    const storedData = JSON.parse(localStorage.getItem("workoutData"));
+// Function to load data from localStorage
+function loadWorkoutData() {
+    // First try to load from the current storage key
+    if (localStorage.getItem("workoutData")) {
+        const storedData = JSON.parse(localStorage.getItem("workoutData"));
+        processStoredData(storedData, "workoutData");
+    }
+    // Check for legacy data storage key for backward compatibility
+    else if (localStorage.getItem("pushUpsData")) {
+        const storedData = JSON.parse(localStorage.getItem("pushUpsData"));
+        processStoredData(storedData, "pushUpsData");
+        
+        // After successfully migrating, remove the old data
+        localStorage.removeItem("pushUpsData");
+    }
+    
+    // Initialize UI with the loaded data
+    initializeUI();
+}
 
+// Process stored data and handle different format versions
+function processStoredData(storedData, storageKey) {
     // Check if the stored data is an array (original format)
     if (Array.isArray(storedData)) {
-        // Convert original format to v2 format with series
         const migratedData = migrateArrayToV2Format(storedData);
         localStorage.setItem("workoutData", JSON.stringify(migratedData));
         workoutsData = migratedData.data;
     }
     // Check if it's v1 format
     else if (storedData.version === DATA_VERSION_V1) {
-        // Convert v1 format to v2 format with series
         const migratedData = migrateV1ToV2Format(storedData);
         localStorage.setItem("workoutData", JSON.stringify(migratedData));
         workoutsData = migratedData.data;
@@ -36,36 +52,30 @@ if (localStorage.getItem("workoutData")) {
     // Already v2 or v3 format
     else if (storedData.version === DATA_VERSION_V2 || storedData.version === DATA_VERSION_V3) {
         workoutsData = storedData.data || [];
+        
+        // If loading from legacy storage key, save to new key
+        if (storageKey !== "workoutData") {
+            localStorage.setItem("workoutData", JSON.stringify(storedData));
+        }
     }
     // Unknown format - use empty array
     else {
         workoutsData = [];
     }
-
-    workoutsData.forEach(data => addRowToTable(data));
-    createOrUpdateCharts();
+    
+    return workoutsData;
 }
-// Check for old data under the previous key for backward compatibility
-else if (localStorage.getItem("pushUpsData")) {
-    const storedData = JSON.parse(localStorage.getItem("pushUpsData"));
 
-    // Migrate data from old storage key to new key
-    if (Array.isArray(storedData)) {
-        const migratedData = migrateArrayToV2Format(storedData);
-        localStorage.setItem("workoutData", JSON.stringify(migratedData));
-        workoutsData = migratedData.data;
-    } else {
-        // Handle other format versions
-        localStorage.setItem("workoutData", JSON.stringify(storedData));
-        workoutsData = storedData.data || [];
+// Initialize the UI with the loaded data
+function initializeUI() {
+    if (workoutsData.length > 0) {
+        workoutsData.forEach(data => addRowToTable(data));
+        createOrUpdateCharts();
     }
-
-    // Remove old data after migration
-    localStorage.removeItem("pushUpsData");
-
-    workoutsData.forEach(data => addRowToTable(data));
-    createOrUpdateCharts();
 }
+
+// Call the function to load data when the page loads
+document.addEventListener('DOMContentLoaded', loadWorkoutData);
 
 // Migration functions
 function migrateArrayToV2Format(oldData) {
