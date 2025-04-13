@@ -74,11 +74,99 @@ function initializeUI() {
     }
 }
 
+// Update workout table to use a list with collapsible items
 function updateWorkoutTable() {
-    // Sort workouts by date (oldest first) before populating the table
-    workoutsData.sort((a, b) => new Date(a.date) - new Date(b.date));
+    // Clear the current list
+    const workoutListContainer = document.getElementById('workout-list-container');
+    workoutListContainer.innerHTML = '';
 
-    workoutsData.forEach(data => addRowToTable(data));
+    // Sort workouts by date (newest first) before populating the list
+    workoutsData.sort((a, b) => new Date(b.date) - new Date(a.date));
+
+    // Add each workout to the list
+    workoutsData.forEach(workout => addWorkoutToList(workout));
+
+    // Add event listeners to toggle the details view
+    setupToggleListeners();
+}
+
+// Add a workout item to the list
+function addWorkoutToList(workout) {
+    const workoutListContainer = document.getElementById('workout-list-container');
+
+    // Create the main workout item
+    const workoutItem = document.createElement('div');
+    workoutItem.className = 'workout-item';
+    workoutItem.dataset.id = new Date(workout.date).getTime(); // Use timestamp as ID
+
+    // Format date
+    const dateDetail = document.createElement('div');
+    dateDetail.className = 'workout-detail date';
+    dateDetail.textContent = createLongFormattedDate(new Date(workout.date));
+
+    // Exercise type
+    const exerciseDetail = document.createElement('div');
+    exerciseDetail.className = 'workout-detail exercise';
+    exerciseDetail.textContent = workout.exercise;
+
+    // Total reps
+    const repsDetail = document.createElement('div');
+    repsDetail.className = 'workout-detail reps';
+    repsDetail.textContent = workout.totalReps;
+
+    // Time
+    const timeDetail = document.createElement('div');
+    timeDetail.className = 'workout-detail time';
+    const displayTime = workout.totalTime || 0;
+    timeDetail.textContent = displayTime + ' min';
+
+    // Reps per minute
+    const repsPerMinDetail = document.createElement('div');
+    repsPerMinDetail.className = 'workout-detail reps-per-min';
+    const repsPerMinute = displayTime > 0 ? (workout.totalReps / displayTime).toFixed(2) : 'N/A';
+    repsPerMinDetail.textContent = repsPerMinute;
+
+    // Toggle icon
+    const toggleIcon = document.createElement('span');
+    toggleIcon.className = 'toggle-icon';
+    toggleIcon.innerHTML = '▶';
+    repsPerMinDetail.appendChild(toggleIcon);
+
+    // Add all details to the workout item
+    workoutItem.appendChild(dateDetail);
+    workoutItem.appendChild(exerciseDetail);
+    workoutItem.appendChild(repsDetail);
+    workoutItem.appendChild(timeDetail);
+    workoutItem.appendChild(repsPerMinDetail);
+
+    // Create the collapsible series container
+    const seriesContainer = document.createElement('div');
+    seriesContainer.className = 'series-container';
+
+    // Create series list
+    let seriesHtml = '<ul class="series-list">';
+    workout.series.forEach((series, index) => {
+        const seriesTime = new Date(series.timestamp);
+        const weightDisplay = series.weight ? `${series.weight} kg` : 'Bodyweight';
+        seriesHtml += `<li>Series ${index + 1}: ${series.reps} reps - ${weightDisplay} - ${seriesTime.toLocaleTimeString()}</li>`;
+    });
+    seriesHtml += '</ul>';
+    seriesContainer.innerHTML = seriesHtml;
+
+    // Add the workout item and series container to the list
+    workoutListContainer.appendChild(workoutItem);
+    workoutListContainer.appendChild(seriesContainer);
+}
+
+// Setup event listeners for toggling series details
+function setupToggleListeners() {
+    const workoutItems = document.querySelectorAll('.workout-item');
+
+    workoutItems.forEach(item => {
+        item.addEventListener('click', function () {
+            this.classList.toggle('expanded');
+        });
+    });
 }
 
 // Call the function to load data when the page loads
@@ -236,10 +324,9 @@ exerciseForm.addEventListener("submit", (e) => {
     };
     localStorage.setItem("workoutData", JSON.stringify(dataToSave));
 
-    // Clear and repopulate the table rows
-    while (exerciseTable.rows.length > 1) {
-        exerciseTable.deleteRow(-1);
-    }
+    // Clear and repopulate the list
+    const workoutListContainer = document.getElementById('workout-list-container');
+    workoutListContainer.innerHTML = '';
 
     updateWorkoutTable();
     createOrUpdateCharts();
@@ -427,7 +514,14 @@ function createCharts() {
     const monthlyData = aggregateDataByMonth(workoutsData);
     const years = [...new Set(monthlyData.map(d => d.year))];
     const yearColorScale = generateColorScale(years.length);
-    const allMonths = [...new Set(monthlyData.map(d => `${d.year}-${d.month}`))].sort();
+
+    // Sort the months chronologically (by year and month)
+    const allMonths = [...new Set(monthlyData.map(d => `${d.year}-${d.month}`))];
+    allMonths.sort((a, b) => {
+        const [yearA, monthA] = a.split('-').map(Number);
+        const [yearB, monthB] = b.split('-').map(Number);
+        return yearA - yearB || monthA - monthB;
+    });
 
     const monthlyDatasets = years.map((year, index) => {
         const yearData = new Array(allMonths.length).fill(null);
@@ -567,7 +661,14 @@ function updateCharts() {
     const monthlyData = aggregateDataByMonth(workoutsData);
     const years = [...new Set(monthlyData.map(d => d.year))];
     const yearColorScale = generateColorScale(years.length);
-    const allMonths = [...new Set(monthlyData.map(d => `${d.year}-${d.month}`))].sort();
+
+    // Sort the months chronologically (by year and month)
+    const allMonths = [...new Set(monthlyData.map(d => `${d.year}-${d.month}`))];
+    allMonths.sort((a, b) => {
+        const [yearA, monthA] = a.split('-').map(Number);
+        const [yearB, monthB] = b.split('-').map(Number);
+        return yearA - yearB || monthA - monthB;
+    });
 
     chartRepsPerMonth.data.labels = allMonths;
     chartRepsPerMonth.data.datasets = years.map((year, index) => {
@@ -797,10 +898,9 @@ function importCSV(replace = false) {
         };
         localStorage.setItem("workoutData", JSON.stringify(dataToSave));
 
-        // Clear and repopulate the table
-        while (exerciseTable.rows.length > 1) {
-            exerciseTable.deleteRow(-1);
-        }
+        // Clear and update the workout list
+        const workoutListContainer = document.getElementById('workout-list-container');
+        workoutListContainer.innerHTML = '';
 
         updateWorkoutTable();
         createOrUpdateCharts();

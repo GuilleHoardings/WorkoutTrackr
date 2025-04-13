@@ -49,16 +49,14 @@
                 <button id="import-csv-replace">Import CSV (Replace All)</button>
                 <input type="file" id="file-input-replace" accept=".csv" style="display: none;">
             </div>
-            <table id="workout-table" border="1">
-                <tr>
-                    <th>Date</th>
-                    <th>Exercise</th>
-                    <th>Total Reps</th>
-                    <th>Time (min)</th>
-                    <th>Reps/min</th>
-                    <th>Series</th>
-                </tr>
-            </table>
+            <div class="workout-list-header">
+                <div class="header-item">Date</div>
+                <div class="header-item">Exercise</div>
+                <div class="header-item">Reps</div>
+                <div class="header-item">Time</div>
+                <div class="header-item">Reps/min</div>
+            </div>
+            <div id="workout-list-container"></div>
         </div>
 
         <div class="right-side">
