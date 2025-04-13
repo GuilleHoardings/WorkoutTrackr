@@ -669,7 +669,7 @@ function parseCSVData(csvData) {
     const parsedData = [];
 
     // Check the header to determine the CSV format
-    const header = rows[0].split(',');
+    const header = rows[0].split(',').map(col => col.trim());
 
     // New format - has 8 columns including series data
     if (header.length >= 7 && header.includes('Series Number')) {
