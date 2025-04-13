@@ -330,10 +330,6 @@ exerciseForm.addEventListener("submit", (e) => {
 
     updateWorkoutTable();
     createOrUpdateCharts();
-
-    // Clear the input fields
-    repsInput.value = "";
-    weightInput.value = "";
 });
 
 function createLongFormattedDate(date) {
