@@ -20,7 +20,7 @@
     <div class="container">
         <div class="left-side">
             <div class="first-col-container">
-                <form id="push-up-form">
+                <form id="workout-form">
                     <div class="form-group">
                         <label for="exercise-select">Exercise:</label>
                         <select id="exercise-select" name="exercise">
@@ -34,8 +34,8 @@
                         </select>
                     </div>
                     <div class="form-group">
-                        <label for="push-ups">Repetitions:</label>
-                        <input type="number" id="push-ups" name="push-ups" min="1" max="200" required>
+                        <label for="reps">Repetitions:</label>
+                        <input type="number" id="reps" name="reps" min="1" max="200" required>
                     </div>
                     <div class="form-group">
                         <label for="weight">Weight (kg, optional):</label>
@@ -49,7 +49,7 @@
                 <button id="import-csv-replace">Import CSV (Replace All)</button>
                 <input type="file" id="file-input-replace" accept=".csv" style="display: none;">
             </div>
-            <table id="push-up-table" border="1">
+            <table id="workout-table" border="1">
                 <tr>
                     <th>Date</th>
                     <th>Exercise</th>
@@ -63,13 +63,13 @@
 
         <div class="right-side">
             <div class="chart-container">
-                <canvas id="push-up-chart"></canvas>
+                <canvas id="reps-chart"></canvas>
             </div>
             <div class="chart-container">
-                <canvas id="push-up-per-minute-chart"></canvas>
+                <canvas id="reps-per-minute-chart"></canvas>
             </div>
             <div class="chart-container">
-                <canvas id="push-up-per-month-chart"></canvas>
+                <canvas id="reps-per-month-chart"></canvas>
             </div>
             <div id="calendar" class="chart-container">
                 <canvas id="activity"></canvas>
@@ -79,7 +79,7 @@
 
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="activity-tracker.js"></script>
-    <script src="pushuptracker.js"></script>
+    <script src="workouttracker.js"></script>
 
 </body>
 

@@ -1,7 +1,7 @@
 // Constants
-const exerciseForm = document.getElementById("push-up-form");
-const exerciseTable = document.getElementById("push-up-table");
-const repsInput = document.getElementById("push-ups");
+const exerciseForm = document.getElementById("workout-form");
+const exerciseTable = document.getElementById("workout-table");
+const repsInput = document.getElementById("reps");
 const weightInput = document.getElementById("weight");
 const exerciseSelect = document.getElementById("exercise-select");
 
@@ -16,21 +16,21 @@ const DATA_VERSION_V3 = 3; // Multiple exercise types support
 const CURRENT_DATA_VERSION = DATA_VERSION_V3;
 
 // Load previously stored data from localStorage
-if (localStorage.getItem("pushUpsData")) {
-    const storedData = JSON.parse(localStorage.getItem("pushUpsData"));
+if (localStorage.getItem("workoutData")) {
+    const storedData = JSON.parse(localStorage.getItem("workoutData"));
 
     // Check if the stored data is an array (original format)
     if (Array.isArray(storedData)) {
         // Convert original format to v2 format with series
         const migratedData = migrateArrayToV2Format(storedData);
-        localStorage.setItem("pushUpsData", JSON.stringify(migratedData));
+        localStorage.setItem("workoutData", JSON.stringify(migratedData));
         workoutsData = migratedData.data;
     }
     // Check if it's v1 format
     else if (storedData.version === DATA_VERSION_V1) {
         // Convert v1 format to v2 format with series
         const migratedData = migrateV1ToV2Format(storedData);
-        localStorage.setItem("pushUpsData", JSON.stringify(migratedData));
+        localStorage.setItem("workoutData", JSON.stringify(migratedData));
         workoutsData = migratedData.data;
     }
     // Already v2 or v3 format
@@ -41,6 +41,27 @@ if (localStorage.getItem("pushUpsData")) {
     else {
         workoutsData = [];
     }
+
+    workoutsData.forEach(data => addRowToTable(data));
+    createOrUpdateCharts();
+}
+// Check for old data under the previous key for backward compatibility
+else if (localStorage.getItem("pushUpsData")) {
+    const storedData = JSON.parse(localStorage.getItem("pushUpsData"));
+
+    // Migrate data from old storage key to new key
+    if (Array.isArray(storedData)) {
+        const migratedData = migrateArrayToV2Format(storedData);
+        localStorage.setItem("workoutData", JSON.stringify(migratedData));
+        workoutsData = migratedData.data;
+    } else {
+        // Handle other format versions
+        localStorage.setItem("workoutData", JSON.stringify(storedData));
+        workoutsData = storedData.data || [];
+    }
+
+    // Remove old data after migration
+    localStorage.removeItem("pushUpsData");
 
     workoutsData.forEach(data => addRowToTable(data));
     createOrUpdateCharts();
@@ -196,7 +217,7 @@ exerciseForm.addEventListener("submit", (e) => {
         version: CURRENT_DATA_VERSION,
         data: workoutsData
     };
-    localStorage.setItem("pushUpsData", JSON.stringify(dataToSave));
+    localStorage.setItem("workoutData", JSON.stringify(dataToSave));
 
     // Clear and repopulate the table rows
     while (exerciseTable.rows.length > 1) {
@@ -308,7 +329,7 @@ function createCharts() {
     // Get unique exercise types
     const exerciseTypes = [...new Set(workoutsData.map(workout => workout.exercise))];
 
-    const canvasChartTotal = document.getElementById("push-up-chart");
+    const canvasChartTotal = document.getElementById("reps-chart");
     const options = {
         scales: {
             y: {
@@ -356,7 +377,7 @@ function createCharts() {
     });
 
     // Create reps per minute chart
-    const canvasChartRepsPerMinute = document.getElementById("push-up-per-minute-chart");
+    const canvasChartRepsPerMinute = document.getElementById("reps-per-minute-chart");
     const repsPerMinuteDatasets = [];
 
     exerciseTypes.forEach((exerciseType, index) => {
@@ -414,7 +435,7 @@ function createCharts() {
         };
     });
 
-    const canvasChartRepsPerMonth = document.getElementById("push-up-per-month-chart");
+    const canvasChartRepsPerMonth = document.getElementById("reps-per-month-chart");
     chartRepsPerMonth = new Chart(canvasChartRepsPerMonth, {
         type: "bar",
         data: {
@@ -602,7 +623,7 @@ function prepareActivityChartData() {
 }
 
 document.getElementById('download-csv').addEventListener('click', function () {
-    const storedData = JSON.parse(localStorage.getItem('pushUpsData'));
+    const storedData = JSON.parse(localStorage.getItem('workoutData'));
 
     // Extract data array from the new format
     const workouts = Array.isArray(storedData) ? storedData : (storedData.data || []);
@@ -764,7 +785,7 @@ function importCSV(replace = false) {
             version: CURRENT_DATA_VERSION,
             data: workoutsData
         };
-        localStorage.setItem("pushUpsData", JSON.stringify(dataToSave));
+        localStorage.setItem("workoutData", JSON.stringify(dataToSave));
 
         // Clear and repopulate the table
         while (exerciseTable.rows.length > 1) {
