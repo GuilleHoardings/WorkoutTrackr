@@ -26,11 +26,11 @@ function loadWorkoutData() {
     else if (localStorage.getItem("pushUpsData")) {
         const storedData = JSON.parse(localStorage.getItem("pushUpsData"));
         processStoredData(storedData, "pushUpsData");
-        
+
         // After successfully migrating, remove the old data
         localStorage.removeItem("pushUpsData");
     }
-    
+
     // Initialize UI with the loaded data
     initializeUI();
 }
@@ -52,7 +52,7 @@ function processStoredData(storedData, storageKey) {
     // Already v2 or v3 format
     else if (storedData.version === DATA_VERSION_V2 || storedData.version === DATA_VERSION_V3) {
         workoutsData = storedData.data || [];
-        
+
         // If loading from legacy storage key, save to new key
         if (storageKey !== "workoutData") {
             localStorage.setItem("workoutData", JSON.stringify(storedData));
@@ -62,16 +62,23 @@ function processStoredData(storedData, storageKey) {
     else {
         workoutsData = [];
     }
-    
+
     return workoutsData;
 }
 
 // Initialize the UI with the loaded data
 function initializeUI() {
     if (workoutsData.length > 0) {
-        workoutsData.forEach(data => addRowToTable(data));
+        updateWorkoutTable();
         createOrUpdateCharts();
     }
+}
+
+function updateWorkoutTable() {
+    // Sort workouts by date (oldest first) before populating the table
+    workoutsData.sort((a, b) => new Date(a.date) - new Date(b.date));
+
+    workoutsData.forEach(data => addRowToTable(data));
 }
 
 // Call the function to load data when the page loads
@@ -234,14 +241,7 @@ exerciseForm.addEventListener("submit", (e) => {
         exerciseTable.deleteRow(-1);
     }
 
-    // Sort workouts by date (newest first)
-    workoutsData.sort((a, b) => new Date(b.date) - new Date(a.date));
-
-    workoutsData.forEach(workout => {
-        addRowToTable(workout);
-    });
-
-    // Update the charts
+    updateWorkoutTable();
     createOrUpdateCharts();
 
     // Clear the input fields
@@ -801,9 +801,8 @@ function importCSV(replace = false) {
         while (exerciseTable.rows.length > 1) {
             exerciseTable.deleteRow(-1);
         }
-        workoutsData.forEach(data => addRowToTable(data));
 
-        // Update charts
+        updateWorkoutTable();
         createOrUpdateCharts();
     };
 
