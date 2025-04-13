@@ -79,6 +79,29 @@ input[type="number"] {
     box-sizing: border-box;
 }
 
+.form-group {
+    margin-bottom: 15px;
+}
+
+select#exercise-select {
+    padding: 8px;
+    font-size: 16px;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    width: 50%;
+    box-sizing: border-box;
+    background-color: white;
+}
+
+input#weight {
+    padding: 8px;
+    font-size: 16px;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    width: 25%;
+    box-sizing: border-box;
+}
+
 /* Button styling */
 button,
 input[type="submit"] {
@@ -131,6 +154,15 @@ td, th {
     /* Matching the header color */
 }
 
+td:nth-child(2) {
+    font-weight: 600;
+    color: #36454f;
+}
+
+th:last-child, td:last-child {
+    width: 35%;
+}
+
 tr:nth-child(even) {
     background-color: #f2f2f2;
 }
@@ -139,7 +171,8 @@ tr:nth-child(even) {
 .chart-container {
     width: 95%;
     min-width: 300px;
-    max-height: 250px;
+    max-height: 350px;
+    height: 200px;
     margin-bottom: 20px;
 }
 

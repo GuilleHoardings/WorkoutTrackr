@@ -1,16 +1,19 @@
 // Constants
-const pushUpForm = document.getElementById("push-up-form");
-const pushUpTable = document.getElementById("push-up-table");
-const pushUpsInput = document.getElementById("push-ups");
+const exerciseForm = document.getElementById("push-up-form");
+const exerciseTable = document.getElementById("push-up-table");
+const repsInput = document.getElementById("push-ups");
+const weightInput = document.getElementById("weight");
+const exerciseSelect = document.getElementById("exercise-select");
 
-// Variables to store push-up data and charts
-let pushUpsData = [];
-let chartPushUpsTotal, chartPushUpsPerMinute, chartPushUpsPerMonth, chartActivity;
+// Variables to store exercise data and charts
+let workoutsData = [];
+let chartTotalReps, chartRepsPerMinute, chartRepsPerMonth, chartActivity;
 
 // Add version numbers for data format
-const DATA_VERSION_V1 = 1;
-const DATA_VERSION_V2 = 2;
-const CURRENT_DATA_VERSION = DATA_VERSION_V2;
+const DATA_VERSION_V1 = 1; // Original format (array of objects)
+const DATA_VERSION_V2 = 2; // Series support
+const DATA_VERSION_V3 = 3; // Multiple exercise types support
+const CURRENT_DATA_VERSION = DATA_VERSION_V3;
 
 // Load previously stored data from localStorage
 if (localStorage.getItem("pushUpsData")) {
@@ -21,25 +24,25 @@ if (localStorage.getItem("pushUpsData")) {
         // Convert original format to v2 format with series
         const migratedData = migrateArrayToV2Format(storedData);
         localStorage.setItem("pushUpsData", JSON.stringify(migratedData));
-        pushUpsData = migratedData.data;
+        workoutsData = migratedData.data;
     }
     // Check if it's v1 format
     else if (storedData.version === DATA_VERSION_V1) {
         // Convert v1 format to v2 format with series
         const migratedData = migrateV1ToV2Format(storedData);
         localStorage.setItem("pushUpsData", JSON.stringify(migratedData));
-        pushUpsData = migratedData.data;
+        workoutsData = migratedData.data;
     }
-    // Already v2 format
-    else if (storedData.version === DATA_VERSION_V2) {
-        pushUpsData = storedData.data || [];
+    // Already v2 or v3 format
+    else if (storedData.version === DATA_VERSION_V2 || storedData.version === DATA_VERSION_V3) {
+        workoutsData = storedData.data || [];
     }
     // Unknown format - use empty array
     else {
-        pushUpsData = [];
+        workoutsData = [];
     }
 
-    pushUpsData.forEach(data => addRowToTable(data));
+    workoutsData.forEach(data => addRowToTable(data));
     createOrUpdateCharts();
 }
 
@@ -77,7 +80,7 @@ function migrateArrayToV2Format(oldData) {
         workouts.push({
             date: date,
             dateString: dateString,
-            exercise: "Push-ups",
+            exercise: entry.exercise || "Push-ups", // Detect or default to "Push-ups"
             series: series,
             totalTime: entry.timeBetweenFirstAndLast,
             totalReps: entry.pushUps
@@ -137,29 +140,34 @@ function migrateV1ToV2Format(oldData) {
 }
 
 // Listen to the form's submit event
-pushUpForm.addEventListener("submit", (e) => {
+exerciseForm.addEventListener("submit", (e) => {
     e.preventDefault();
 
-    // Get push-up count from the input field
-    const pushUps = parseInt(pushUpsInput.value);
+    // Get form values
+    const reps = parseInt(repsInput.value);
+    const exercise = exerciseSelect.value;
+    const weight = weightInput.value ? parseFloat(weightInput.value) : null;
     const newEntryTime = new Date();
     const dateString = newEntryTime.toISOString().split('T')[0]; // YYYY-MM-DD
 
-    // Check if an entry with the current date already exists in the array
-    const existingWorkout = pushUpsData.find(workout => workout.dateString === dateString);
+    // Check if a workout for today already exists
+    const existingWorkout = workoutsData.find(workout =>
+        workout.dateString === dateString &&
+        workout.exercise === exercise
+    );
 
     if (existingWorkout) {
-        // If a workout exists for today, add a new series to it
+        // If a workout exists for today with the same exercise, add a new series
         const newSeries = {
-            reps: pushUps,
-            weight: null, // No weight for push-ups in this version
+            reps: reps,
+            weight: weight,
             timestamp: newEntryTime
         };
 
         existingWorkout.series.push(newSeries);
 
         // Update the totals
-        existingWorkout.totalReps += pushUps;
+        existingWorkout.totalReps += reps;
 
         // Calculate total time between first and last series
         const firstSeriesTime = new Date(existingWorkout.series[0].timestamp).getTime();
@@ -170,40 +178,44 @@ pushUpForm.addEventListener("submit", (e) => {
         const newWorkout = {
             date: newEntryTime,
             dateString: dateString,
-            exercise: "Push-ups",
+            exercise: exercise,
             series: [{
-                reps: pushUps,
-                weight: null,
+                reps: reps,
+                weight: weight,
                 timestamp: newEntryTime
             }],
             totalTime: 0, // First series, so no time elapsed yet
-            totalReps: pushUps
+            totalReps: reps
         };
 
-        pushUpsData.push(newWorkout);
+        workoutsData.push(newWorkout);
     }
 
     // Save to localStorage using the new format
     const dataToSave = {
         version: CURRENT_DATA_VERSION,
-        data: pushUpsData
+        data: workoutsData
     };
     localStorage.setItem("pushUpsData", JSON.stringify(dataToSave));
 
     // Clear and repopulate the table rows
-    while (pushUpTable.rows.length > 1) {
-        pushUpTable.deleteRow(-1);
+    while (exerciseTable.rows.length > 1) {
+        exerciseTable.deleteRow(-1);
     }
 
-    pushUpsData.forEach(workout => {
+    // Sort workouts by date (newest first)
+    workoutsData.sort((a, b) => new Date(b.date) - new Date(a.date));
+
+    workoutsData.forEach(workout => {
         addRowToTable(workout);
     });
 
     // Update the charts
     createOrUpdateCharts();
 
-    // Clear the input field
-    pushUpsInput.value = "";
+    // Clear the input fields
+    repsInput.value = "";
+    weightInput.value = "";
 });
 
 function createLongFormattedDate(date) {
@@ -222,32 +234,35 @@ function createShortFormattedDate(date) {
 }
 
 function addRowToTable(workout) {
-    const row = pushUpTable.insertRow(1);
+    const row = exerciseTable.insertRow(1);
     const dateCell = row.insertCell(0);
-    const pushUpsCell = row.insertCell(1);
-    const timeCell = row.insertCell(2);
-    const pushUpsPerMinuteCell = row.insertCell(3);
-    const seriesCell = row.insertCell(4);
+    const exerciseCell = row.insertCell(1);
+    const repsCell = row.insertCell(2);
+    const timeCell = row.insertCell(3);
+    const repsPerMinuteCell = row.insertCell(4);
+    const seriesCell = row.insertCell(5);
 
     // Format and display the data in the table
     dateCell.innerHTML = createLongFormattedDate(new Date(workout.date));
-    pushUpsCell.innerHTML = workout.totalReps;
+    exerciseCell.innerHTML = workout.exercise;
+    repsCell.innerHTML = workout.totalReps;
 
     // Handle time display - show 0 minutes for workouts with only one series
     const displayTime = workout.totalTime || 0;
     timeCell.innerHTML = displayTime + ' minutes';
 
-    // Calculate push-ups per minute (if time > 0)
-    const pushUpsPerMinute = displayTime > 0 ?
+    // Calculate reps per minute (if time > 0)
+    const repsPerMinute = displayTime > 0 ?
         (workout.totalReps / displayTime).toFixed(2) :
         'N/A';
-    pushUpsPerMinuteCell.innerHTML = pushUpsPerMinute;
+    repsPerMinuteCell.innerHTML = repsPerMinute;
 
     // Create series display
     let seriesHtml = '<ul class="series-list">';
     workout.series.forEach((series, index) => {
         const seriesTime = new Date(series.timestamp);
-        seriesHtml += `<li>Series ${index + 1}: ${series.reps} reps - ${seriesTime.toLocaleTimeString()}</li>`;
+        const weightDisplay = series.weight ? `${series.weight} kg` : 'Bodyweight';
+        seriesHtml += `<li>Series ${index + 1}: ${series.reps} reps - ${weightDisplay} - ${seriesTime.toLocaleTimeString()}</li>`;
     });
     seriesHtml += '</ul>';
     seriesCell.innerHTML = seriesHtml;
@@ -255,14 +270,26 @@ function addRowToTable(workout) {
 
 function aggregateDataByMonth(data) {
     const monthlyData = {};
+
+    // Group by exercise type, year, and month
     data.forEach(workout => {
         const date = new Date(workout.date);
-        const key = `${date.getFullYear()}-${date.getMonth() + 1}`;
+        const year = date.getFullYear();
+        const month = date.getMonth() + 1;
+        const key = `${year}-${month}`;
+
         if (!monthlyData[key]) {
-            monthlyData[key] = { year: date.getFullYear(), month: date.getMonth() + 1, pushUps: 0 };
+            monthlyData[key] = {
+                year: year,
+                month: month,
+                reps: 0
+            };
         }
-        monthlyData[key].pushUps += workout.totalReps;
+
+        monthlyData[key].reps += workout.totalReps;
     });
+
+    // Sort by year and month
     return Object.values(monthlyData).sort((a, b) => {
         return a.year - b.year || a.month - b.month;
     });
@@ -270,7 +297,7 @@ function aggregateDataByMonth(data) {
 
 function createOrUpdateCharts() {
     // Check if the charts already exist, if they do, update the data
-    if (chartPushUpsTotal && chartPushUpsPerMinute) {
+    if (chartTotalReps && chartRepsPerMinute) {
         updateCharts();
     } else {
         createCharts();
@@ -278,8 +305,10 @@ function createOrUpdateCharts() {
 }
 
 function createCharts() {
-    const canvasChartPushUps = document.getElementById("push-up-chart");
-    const shortFormattedDates = getShortFormattedDates();
+    // Get unique exercise types
+    const exerciseTypes = [...new Set(workoutsData.map(workout => workout.exercise))];
+
+    const canvasChartTotal = document.getElementById("push-up-chart");
     const options = {
         scales: {
             y: {
@@ -290,63 +319,107 @@ function createCharts() {
         maintainAspectRatio: false
     };
 
-    chartPushUpsTotal = new Chart(canvasChartPushUps, {
+    // Create datasets for each exercise type
+    const datasets = [];
+    const colorScale = generateColorScale(exerciseTypes.length);
+
+    exerciseTypes.forEach((exerciseType, index) => {
+        const exerciseData = workoutsData.filter(workout => workout.exercise === exerciseType);
+        const dates = exerciseData.map(workout => createShortFormattedDate(new Date(workout.date)));
+        const reps = exerciseData.map(workout => workout.totalReps);
+
+        datasets.push({
+            label: exerciseType,
+            data: reps,
+            backgroundColor: colorScale[index % colorScale.length],
+            borderColor: colorScale[index % colorScale.length],
+            borderWidth: 1,
+        });
+    });
+
+    // Create the chart with all exercise types
+    chartTotalReps = new Chart(canvasChartTotal, {
         type: "bar",
         data: {
-            labels: shortFormattedDates,
-            datasets: [{
-                label: "Push ups",
-                data: getPushUpsPerDate(),
-                backgroundColor: "rgba(75, 192, 192, 0.2)",
-                borderColor: "rgba(75, 192, 192, 1)",
-                borderWidth: 1,
-            }]
+            labels: getUniqueDates(),
+            datasets: datasets
         },
-        options: options
+        options: {
+            ...options,
+            plugins: {
+                title: {
+                    display: true,
+                    text: 'Total Reps by Exercise'
+                }
+            }
+        }
     });
 
-    const canvasChartPushUpsPerMinute = document.getElementById("push-up-per-minute-chart");
-    chartPushUpsPerMinute = new Chart(canvasChartPushUpsPerMinute, {
+    // Create reps per minute chart
+    const canvasChartRepsPerMinute = document.getElementById("push-up-per-minute-chart");
+    const repsPerMinuteDatasets = [];
+
+    exerciseTypes.forEach((exerciseType, index) => {
+        const exerciseData = workoutsData.filter(workout => workout.exercise === exerciseType);
+        const repsPerMinute = exerciseData.map(workout => {
+            const time = workout.totalTime || 1; // Avoid division by zero
+            return workout.totalReps / time;
+        });
+
+        repsPerMinuteDatasets.push({
+            label: exerciseType,
+            data: repsPerMinute,
+            fill: false,
+            borderColor: colorScale[index % colorScale.length],
+            tension: 0.1,
+        });
+    });
+
+    chartRepsPerMinute = new Chart(canvasChartRepsPerMinute, {
         type: "line",
         data: {
-            labels: shortFormattedDates,
-            datasets: [{
-                label: "Push ups per minute",
-                data: getPushUpsPerMinute(),
-                fill: false,
-                borderColor: "rgba(255, 99, 132, 1)",
-                tension: 0.1,
-            }]
+            labels: getUniqueDates(),
+            datasets: repsPerMinuteDatasets
         },
-        options: options
+        options: {
+            ...options,
+            plugins: {
+                title: {
+                    display: true,
+                    text: 'Reps per Minute by Exercise'
+                }
+            }
+        }
     });
 
-    const monthlyData = aggregateDataByMonth(pushUpsData);
+    // Monthly chart with all exercise types
+    const monthlyData = aggregateDataByMonth(workoutsData);
     const years = [...new Set(monthlyData.map(d => d.year))];
-    const colorScale = generateColorScale(years.length);
-    const allMonths = monthlyData.map(d => `${d.year}-${d.month}`);
-    const datasets = years.map((year, index) => {
+    const yearColorScale = generateColorScale(years.length);
+    const allMonths = [...new Set(monthlyData.map(d => `${d.year}-${d.month}`))].sort();
+
+    const monthlyDatasets = years.map((year, index) => {
         const yearData = new Array(allMonths.length).fill(null);
         monthlyData.filter(d => d.year === year).forEach(d => {
             const monthIndex = allMonths.indexOf(`${d.year}-${d.month}`);
-            yearData[monthIndex] = d.pushUps;
+            yearData[monthIndex] = d.reps;
         });
 
         return {
             label: year.toString(),
             data: yearData,
-            backgroundColor: colorScale[index],
-            borderColor: colorScale[index],
+            backgroundColor: yearColorScale[index % yearColorScale.length],
+            borderColor: yearColorScale[index % yearColorScale.length],
             borderWidth: 1,
         };
     });
 
-    const canvasChartPushUpsPerMonth = document.getElementById("push-up-per-month-chart");
-    chartPushUpsPerMonth = new Chart(canvasChartPushUpsPerMonth, {
+    const canvasChartRepsPerMonth = document.getElementById("push-up-per-month-chart");
+    chartRepsPerMonth = new Chart(canvasChartRepsPerMonth, {
         type: "bar",
         data: {
             labels: allMonths,
-            datasets: datasets
+            datasets: monthlyDatasets
         },
         options: {
             scales: {
@@ -370,81 +443,161 @@ function createCharts() {
                 }
             },
             responsive: true,
-            maintainAspectRatio: false
+            maintainAspectRatio: false,
+            plugins: {
+                title: {
+                    display: true,
+                    text: 'Monthly Progress'
+                }
+            }
         }
     });
 
-    createPushUpActivityChart();
+    // Create the activity chart using the consolidated function
+    prepareActivityChartData();
 }
 
 function getPushUpsPerDate() {
-    return pushUpsData.map(workout => workout.totalReps);
+    return workoutsData.map(workout => workout.totalReps);
 }
 
 function getShortFormattedDates() {
-    return pushUpsData.map(workout => createShortFormattedDate(new Date(workout.date)));
+    return workoutsData.map(workout => createShortFormattedDate(new Date(workout.date)));
 }
 
 function getPushUpsPerMinute() {
-    return pushUpsData.map(workout => {
+    return workoutsData.map(workout => {
         const time = workout.totalTime || 1; // Avoid division by zero
         return workout.totalReps / time;
     });
 }
 
 function updateCharts() {
-    const shortFormattedDates = getShortFormattedDates();
-    const monthlyData = aggregateDataByMonth(pushUpsData);
-    const years = [...new Set(monthlyData.map(d => d.year))];
-    const colorScale = generateColorScale(years.length);
-    const allMonths = monthlyData.map(d => `${d.year}-${d.month}`);
+    // Get unique exercise types
+    const exerciseTypes = [...new Set(workoutsData.map(workout => workout.exercise))];
+    const colorScale = generateColorScale(exerciseTypes.length);
 
-    // Update total push-ups chart
-    chartPushUpsTotal.data.labels = shortFormattedDates;
-    chartPushUpsTotal.data.datasets[0].data = getPushUpsPerDate();
-    chartPushUpsTotal.update();
+    // Get unique dates for all workouts
+    const uniqueDates = getUniqueDates();
 
-    // Update push-ups per minute chart
-    chartPushUpsPerMinute.data.labels = shortFormattedDates;
-    chartPushUpsPerMinute.data.datasets[0].data = getPushUpsPerMinute();
-    chartPushUpsPerMinute.update();
+    // Create datasets for each exercise type
+    const totalRepsDatasets = [];
+    const repsPerMinuteDatasets = [];
+
+    exerciseTypes.forEach((exerciseType, index) => {
+        const exerciseData = workoutsData.filter(workout => workout.exercise === exerciseType);
+
+        // Create mapping of dates to reps for this exercise
+        const dateToReps = {};
+        const dateToRepsPerMinute = {};
+
+        exerciseData.forEach(workout => {
+            const formattedDate = createShortFormattedDate(new Date(workout.date));
+            dateToReps[formattedDate] = workout.totalReps;
+
+            const time = workout.totalTime || 1; // Avoid division by zero
+            dateToRepsPerMinute[formattedDate] = workout.totalReps / time;
+        });
+
+        // Fill in data for all dates (with nulls for missing dates)
+        const repsData = uniqueDates.map(date => dateToReps[date] || null);
+        const repsPerMinuteData = uniqueDates.map(date => dateToRepsPerMinute[date] || null);
+
+        // Add dataset for total reps chart
+        totalRepsDatasets.push({
+            label: exerciseType,
+            data: repsData,
+            backgroundColor: colorScale[index % colorScale.length],
+            borderColor: colorScale[index % colorScale.length],
+            borderWidth: 1
+        });
+
+        // Add dataset for reps per minute chart
+        repsPerMinuteDatasets.push({
+            label: exerciseType,
+            data: repsPerMinuteData,
+            fill: false,
+            borderColor: colorScale[index % colorScale.length],
+            tension: 0.1
+        });
+    });
+
+    // Update the total reps chart
+    chartTotalReps.data.labels = uniqueDates;
+    chartTotalReps.data.datasets = totalRepsDatasets;
+    chartTotalReps.update();
+
+    // Update the reps per minute chart
+    chartRepsPerMinute.data.labels = uniqueDates;
+    chartRepsPerMinute.data.datasets = repsPerMinuteDatasets;
+    chartRepsPerMinute.update();
 
     // Update monthly chart
-    chartPushUpsPerMonth.data.labels = allMonths;
-    chartPushUpsPerMonth.data.datasets = years.map((year, index) => {
+    const monthlyData = aggregateDataByMonth(workoutsData);
+    const years = [...new Set(monthlyData.map(d => d.year))];
+    const yearColorScale = generateColorScale(years.length);
+    const allMonths = [...new Set(monthlyData.map(d => `${d.year}-${d.month}`))].sort();
+
+    chartRepsPerMonth.data.labels = allMonths;
+    chartRepsPerMonth.data.datasets = years.map((year, index) => {
         const yearData = new Array(allMonths.length).fill(null);
         monthlyData.filter(d => d.year === year).forEach(d => {
             const monthIndex = allMonths.indexOf(`${d.year}-${d.month}`);
-            yearData[monthIndex] = d.pushUps;
+            yearData[monthIndex] = d.reps;
         });
 
         return {
             label: year.toString(),
             data: yearData,
-            backgroundColor: colorScale[index],
-            borderColor: colorScale[index],
+            backgroundColor: yearColorScale[index % yearColorScale.length],
+            borderColor: yearColorScale[index % yearColorScale.length],
             borderWidth: 1,
         };
     });
-    chartPushUpsPerMonth.update();
+    chartRepsPerMonth.update();
 
-    // Update activity chart
-    createPushUpActivityChart();
+    // Update activity chart 
+    prepareActivityChartData();
 }
 
-function createPushUpActivityChart() {
-    const storedData = JSON.parse(localStorage.getItem('pushUpsData'));
+function getUniqueDates() {
+    // Get unique dates from all workouts, sorted chronologically
+    const dateStrings = [...new Set(workoutsData.map(workout => workout.dateString))];
+    return dateStrings.sort().map(dateString => {
+        const date = new Date(dateString);
+        return createShortFormattedDate(date);
+    });
+}
 
-    // Handle the new data format with workouts and series
-    const workouts = Array.isArray(storedData) ? storedData : (storedData.data || []);
+function prepareActivityChartData() {
+    // Create activity chart that shows all exercises combined
+    const exerciseTypes = [...new Set(workoutsData.map(workout => workout.exercise))];
 
-    // Map workouts to activity data format
-    const activityData = workouts.map(workout => ({
-        date: workout.date,
-        value: workout.totalReps
+    // Group workout data by date across all exercise types
+    const dateTotals = {};
+    workoutsData.forEach(workout => {
+        const dateString = workout.dateString;
+        if (!dateTotals[dateString]) {
+            dateTotals[dateString] = {
+                date: new Date(workout.date),
+                totalReps: 0
+            };
+        }
+        dateTotals[dateString].totalReps += workout.totalReps;
+    });
+
+    // Convert to activity data format
+    const activityData = Object.values(dateTotals).map(data => ({
+        date: data.date,
+        value: data.totalReps
     }));
 
+    // Sort the activity data chronologically (oldest to newest)
+    // This is critical for the activity chart to correctly calculate min/max years
+    activityData.sort((a, b) => new Date(a.date) - new Date(b.date));
+
     const canvas = document.getElementById('activity');
+    // Call the external function with a different name
     createActivityChart(activityData, canvas);
 }
 
@@ -601,23 +754,23 @@ function importCSV(replace = false) {
         const parsedData = parseCSVData(csvData);
 
         if (replace) {
-            pushUpsData = parsedData;
+            workoutsData = parsedData;
         } else {
-            pushUpsData = pushUpsData.concat(parsedData);
+            workoutsData = workoutsData.concat(parsedData);
         }
 
         // Save to localStorage using the new format
         const dataToSave = {
             version: CURRENT_DATA_VERSION,
-            data: pushUpsData
+            data: workoutsData
         };
         localStorage.setItem("pushUpsData", JSON.stringify(dataToSave));
 
         // Clear and repopulate the table
-        while (pushUpTable.rows.length > 1) {
-            pushUpTable.deleteRow(-1);
+        while (exerciseTable.rows.length > 1) {
+            exerciseTable.deleteRow(-1);
         }
-        pushUpsData.forEach(data => addRowToTable(data));
+        workoutsData.forEach(data => addRowToTable(data));
 
         // Update charts
         createOrUpdateCharts();
