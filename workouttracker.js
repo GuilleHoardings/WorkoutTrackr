@@ -764,9 +764,14 @@ document.getElementById('download-csv').addEventListener('click', function () {
     var csv = csvRows.map(row => row.join(',')).join('\n');
     var csvContent = 'data:text/csv;charset=utf-8,' + csv;
     var encodedUri = encodeURI(csvContent);
+
+    // Get current date in YYYY-MM-DD format for the filename
+    const now = new Date();
+    const dateStr = now.toISOString().split('T')[0];
+
     var link = document.createElement('a');
     link.setAttribute('href', encodedUri);
-    link.setAttribute('download', 'workout_data.csv');
+    link.setAttribute('download', `workout_data_${dateStr}.csv`);
     document.body.appendChild(link);
     link.click();
 });
