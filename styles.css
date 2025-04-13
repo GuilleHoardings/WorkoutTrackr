@@ -197,6 +197,24 @@ tr:nth-child(even) {
     justify-content: space-between;
 }
 
+/* Layout for controls */
+.exercise-controls {
+    margin-bottom: 15px;
+}
+
+.csv-controls {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin-bottom: 20px;
+    padding-bottom: 15px;
+    border-bottom: 1px solid #eee;
+}
+
+.csv-controls button {
+    margin-top: 0;
+}
+
 /* Miscellaneous improvements */
 button, input[type="submit"] {
     width: auto;
@@ -312,4 +330,60 @@ input[type="file"] {
     background-color: white;
     border-radius: 4px;
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+/* Single row form layout */
+.form-controls-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    gap: 15px;
+}
+
+.form-controls-row .form-group {
+    margin-bottom: 10px;
+    flex: 1;
+    min-width: 150px;
+}
+
+.form-controls-row .submit-group {
+    flex: 0 0 auto;
+    display: flex;
+    align-items: flex-end;
+}
+
+.form-controls-row label {
+    display: block;
+    margin-bottom: 6px;
+}
+
+.form-controls-row select,
+.form-controls-row input[type="number"] {
+    width: 100%;
+}
+
+/* Adjustments to input sizes */
+select#exercise-select {
+    width: 100%;
+}
+
+input#weight, input#reps {
+    width: 100%;
+}
+
+.exercise-controls {
+    margin-bottom: 15px;
+}
+
+.csv-controls {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin-bottom: 20px;
+    padding-bottom: 15px;
+    border-bottom: 1px solid #eee;
+}
+
+.csv-controls button {
+    margin-top: 0;
 }
