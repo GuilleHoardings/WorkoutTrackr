@@ -786,7 +786,7 @@ function parseCSVData(csvData) {
     // New format - has 8 columns including series data
     if (header.length >= 7 && header.includes('Series Number')) {
         // Process as new format with series
-        const workoutMap = new Map(); // Map to group series by workout date
+        const workoutMap = new Map(); // Map to group series by workout date AND exercise type
 
         // Skip header row
         for (let i = 1; i < rows.length; i++) {
@@ -802,9 +802,12 @@ function parseCSVData(csvData) {
                 const totalReps = parseInt(columns[6]);
                 const totalTime = columns.length >= 8 ? parseInt(columns[7]) : 0;
 
+                // Create a unique key using both date and exercise type
+                const workoutKey = `${dateString}-${exercise}`;
+
                 // Create or update the workout in the map
-                if (!workoutMap.has(dateString)) {
-                    workoutMap.set(dateString, {
+                if (!workoutMap.has(workoutKey)) {
+                    workoutMap.set(workoutKey, {
                         date: workoutDate,
                         dateString: dateString,
                         exercise: exercise,
@@ -815,7 +818,7 @@ function parseCSVData(csvData) {
                 }
 
                 // Add the series to the workout
-                const workout = workoutMap.get(dateString);
+                const workout = workoutMap.get(workoutKey);
                 workout.series.push({
                     reps: reps,
                     weight: weight,
