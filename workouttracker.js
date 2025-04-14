@@ -129,7 +129,7 @@ function addWorkoutToList(workout) {
     // Toggle icon
     const toggleIcon = document.createElement('span');
     toggleIcon.className = 'toggle-icon';
-    toggleIcon.innerHTML = '▶';
+    toggleIcon.textContent = '▶';
     repsPerMinDetail.appendChild(toggleIcon);
 
     // Add all details to the workout item
@@ -433,18 +433,29 @@ function createCharts() {
         maintainAspectRatio: false
     };
 
+    // Get unique dates for all workouts - sorted chronologically
+    const uniqueDates = getUniqueDates();
+
     // Create datasets for each exercise type
     const datasets = [];
     const colorScale = generateColorScale(exerciseTypes.length);
 
     exerciseTypes.forEach((exerciseType, index) => {
         const exerciseData = workoutsData.filter(workout => workout.exercise === exerciseType);
-        const dates = exerciseData.map(workout => createShortFormattedDate(new Date(workout.date)));
-        const reps = exerciseData.map(workout => workout.totalReps);
+
+        // Create mapping of dates to reps for this exercise
+        const dateToReps = {};
+        exerciseData.forEach(workout => {
+            const formattedDate = createShortFormattedDate(new Date(workout.date));
+            dateToReps[formattedDate] = workout.totalReps;
+        });
+
+        // Fill in data for all dates (with nulls for missing dates)
+        const repsData = uniqueDates.map(date => dateToReps[date] || null);
 
         datasets.push({
             label: exerciseType,
-            data: reps,
+            data: repsData,
             backgroundColor: colorScale[index % colorScale.length],
             borderColor: colorScale[index % colorScale.length],
             borderWidth: 1,
@@ -455,7 +466,7 @@ function createCharts() {
     chartTotalReps = new Chart(canvasChartTotal, {
         type: "bar",
         data: {
-            labels: getUniqueDates(),
+            labels: uniqueDates,
             datasets: datasets
         },
         options: {
@@ -475,14 +486,21 @@ function createCharts() {
 
     exerciseTypes.forEach((exerciseType, index) => {
         const exerciseData = workoutsData.filter(workout => workout.exercise === exerciseType);
-        const repsPerMinute = exerciseData.map(workout => {
+
+        // Create mapping of dates to reps/min for this exercise
+        const dateToRepsPerMinute = {};
+        exerciseData.forEach(workout => {
+            const formattedDate = createShortFormattedDate(new Date(workout.date));
             const time = workout.totalTime || 1; // Avoid division by zero
-            return workout.totalReps / time;
+            dateToRepsPerMinute[formattedDate] = workout.totalReps / time;
         });
+
+        // Fill in data for all dates (with nulls for missing dates)
+        const repsPerMinuteData = uniqueDates.map(date => dateToRepsPerMinute[date] || null);
 
         repsPerMinuteDatasets.push({
             label: exerciseType,
-            data: repsPerMinute,
+            data: repsPerMinuteData,
             fill: false,
             borderColor: colorScale[index % colorScale.length],
             tension: 0.1,
@@ -492,7 +510,7 @@ function createCharts() {
     chartRepsPerMinute = new Chart(canvasChartRepsPerMinute, {
         type: "line",
         data: {
-            labels: getUniqueDates(),
+            labels: uniqueDates,
             datasets: repsPerMinuteDatasets
         },
         options: {
@@ -600,8 +618,21 @@ function updateCharts() {
     const exerciseTypes = [...new Set(workoutsData.map(workout => workout.exercise))];
     const colorScale = generateColorScale(exerciseTypes.length);
 
-    // Get unique dates for all workouts
+    // Get unique dates for all workouts - sorted chronologically
     const uniqueDates = getUniqueDates();
+    const uniqueDateObjects = uniqueDates.map(formattedDate => {
+        // We need to extract the original dateString from the formatted date
+        // Find any workout with this formatted date
+        for (const workout of workoutsData) {
+            if (createShortFormattedDate(new Date(workout.date)) === formattedDate) {
+                return {
+                    dateString: workout.dateString,
+                    formattedDate: formattedDate
+                };
+            }
+        }
+        return null;
+    }).filter(d => d !== null);
 
     // Create datasets for each exercise type
     const totalRepsDatasets = [];
@@ -623,6 +654,7 @@ function updateCharts() {
         });
 
         // Fill in data for all dates (with nulls for missing dates)
+        // Ensure data is in the same order as uniqueDates
         const repsData = uniqueDates.map(date => dateToReps[date] || null);
         const repsPerMinuteData = uniqueDates.map(date => dateToRepsPerMinute[date] || null);
 
@@ -693,7 +725,9 @@ function updateCharts() {
 function getUniqueDates() {
     // Get unique dates from all workouts, sorted chronologically
     const dateStrings = [...new Set(workoutsData.map(workout => workout.dateString))];
-    return dateStrings.sort().map(dateString => {
+
+    // Sort by actual date values instead of string comparison
+    return dateStrings.sort((a, b) => new Date(a) - new Date(b)).map(dateString => {
         const date = new Date(dateString);
         return createShortFormattedDate(date);
     });
