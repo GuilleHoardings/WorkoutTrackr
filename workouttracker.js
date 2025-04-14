@@ -551,8 +551,10 @@ function createCharts() {
                         minRotation: 0,
                         callback: function (val, index) {
                             const label = this.getLabelForValue(val);
+                            // Check if label is defined before attempting to split it
+                            if (!label) return '';
                             const [year, month] = label.split('-');
-                            if (index === 0 || allMonths[index - 1].split('-')[0] !== year) {
+                            if (index === 0 || (allMonths[index - 1] && allMonths[index - 1].split('-')[0] !== year)) {
                                 return [`${month}`, year];
                             }
                             return month;
