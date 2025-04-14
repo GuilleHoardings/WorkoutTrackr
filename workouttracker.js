@@ -456,8 +456,29 @@ function prepareMonthlyChartData() {
     const years = [...new Set(monthlyData.map(d => d.year))];
     const yearColorScale = generateColorScale(years.length);
 
-    // Sort the months chronologically (by year and month)
-    const allMonths = [...new Set(monthlyData.map(d => `${d.year}-${d.month}`))];
+    // Create a complete set of month entries for all years in the data
+    const allMonths = [];
+
+    // Find min and max year to ensure we cover the entire range
+    const minYear = Math.min(...years);
+    const maxYear = Math.max(...years);
+
+    // Get current date to limit months in current year
+    const currentDate = new Date();
+    const currentYear = currentDate.getFullYear();
+    const currentMonth = currentDate.getMonth() + 1; // JavaScript months are 0-indexed
+
+    // Generate all months for all years in the range
+    for (let year = minYear; year <= maxYear; year++) {
+        // For current year, only show months up to the current month
+        const monthLimit = (year === currentYear) ? currentMonth : 12;
+
+        for (let month = 1; month <= monthLimit; month++) {
+            allMonths.push(`${year}-${month}`);
+        }
+    }
+
+    // Sort the months chronologically
     allMonths.sort((a, b) => {
         const [yearA, monthA] = a.split('-').map(Number);
         const [yearB, monthB] = b.split('-').map(Number);
