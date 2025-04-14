@@ -4,7 +4,9 @@ A simple, intuitive web application for tracking your workout exercises and moni
 
 **Live Demo:** [https://guillehoardings.github.io/WorkoutTrackr/](https://guillehoardings.github.io/WorkoutTrackr/)
 
-![WorkoutTrackr Logo](pushup.png)
+## Application Screenshot
+
+![WorkoutTrackr Screenshot](screenshot.png)
 
 ## Features
 
