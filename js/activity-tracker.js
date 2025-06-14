@@ -55,6 +55,38 @@ function getGreenShadeDiscrete(pushUps) {
 }
 
 /**
+ * Gets the color for a specific exercise with intensity based on reps
+ * 
+ * @param {string} exercise - The exercise name
+ * @param {number} reps - Number of reps for this exercise
+ * @returns {string} The color for the exercise
+ */
+function getColorForExercise(exercise, reps) {
+    // Exercise color mapping
+    const exerciseColors = {
+        'Push-ups': { hue: 130, name: 'Push-ups' },      // Green
+        'Pull-ups': { hue: 210, name: 'Pull-ups' },      // Blue
+        'Squats': { hue: 270, name: 'Squats' },          // Purple
+        'Sit-ups': { hue: 30, name: 'Sit-ups' },         // Orange
+        'Lunges': { hue: 300, name: 'Lunges' },          // Magenta
+        'Dips': { hue: 180, name: 'Dips' },              // Cyan
+        'Planks': { hue: 60, name: 'Planks' }            // Yellow
+    };
+
+    // Get the color for the exercise
+    const exerciseColor = exerciseColors[exercise] || { hue: 130, name: 'Unknown' };
+
+    // Calculate intensity based on reps
+    const maxReps = 160;
+    const minLightness = 20;
+    const maxLightness = 70;
+
+    const lightness = maxLightness - (reps / maxReps) * (maxLightness - minLightness);
+
+    return `hsl(${exerciseColor.hue}, 70%, ${Math.max(minLightness, Math.min(maxLightness, lightness))}%)`;
+}
+
+/**
  * Gets the color for a cell based on the exercise types and their values.
  * If multiple exercises exist for a day, it will choose the dominant exercise.
  * 
@@ -73,29 +105,8 @@ function getExerciseColor(cellData) {
         exercises[a] > exercises[b] ? a : b
     );
 
-    // Exercise color mapping
-    const exerciseColors = {
-        'Push-ups': { hue: 130, name: 'Push-ups' },      // Green
-        'Pull-ups': { hue: 210, name: 'Pull-ups' },      // Blue
-        'Squats': { hue: 270, name: 'Squats' },          // Purple
-        'Sit-ups': { hue: 30, name: 'Sit-ups' },         // Orange
-        'Lunges': { hue: 300, name: 'Lunges' },          // Magenta
-        'Dips': { hue: 180, name: 'Dips' },              // Cyan
-        'Planks': { hue: 60, name: 'Planks' }            // Yellow
-    };
-
-    // Get the color for the dominant exercise
-    const exerciseColor = exerciseColors[dominantExercise] || { hue: 130, name: 'Unknown' };
-
-    // Calculate intensity based on reps (similar to the original green shade logic)
-    const maxReps = 160;
-    const minLightness = 20;
-    const maxLightness = 70;
-
     const repsForExercise = exercises[dominantExercise];
-    const lightness = maxLightness - (repsForExercise / maxReps) * (maxLightness - minLightness);
-
-    return `hsl(${exerciseColor.hue}, 70%, ${Math.max(minLightness, Math.min(maxLightness, lightness))}%)`;
+    return getColorForExercise(dominantExercise, repsForExercise);
 }
 
 /**
@@ -180,14 +191,21 @@ function createActivityChart(data, canvas) {
                     mouseY >= cell.y && mouseY <= cell.y + cell.height) {
                     tooltip.style.display = 'block';
                     tooltip.style.left = (e.pageX + 10) + 'px';
-                    tooltip.style.top = (e.pageY + 10) + 'px';
-
-                    // Create detailed tooltip content
+                    tooltip.style.top = (e.pageY + 10) + 'px';                    // Create detailed tooltip content
                     let tooltipContent = `Date: ${cell.date.toLocaleDateString()}<br>`;
                     tooltipContent += `Total Reps: ${cell.cellValue}<br>`;
 
                     if (cell.exercises && Object.keys(cell.exercises).length > 0) {
-                        tooltipContent += `Dominant: ${cell.dominantExercise}<br>`;
+                        const exerciseCount = Object.keys(cell.exercises).length;
+
+                        if (exerciseCount === 2) {
+                            tooltipContent += `<strong>Split Square - Two Exercises:</strong><br>`;
+                        } else if (exerciseCount === 1) {
+                            tooltipContent += `<strong>Single Exercise:</strong><br>`;
+                        } else {
+                            tooltipContent += `Dominant: ${cell.dominantExercise}<br>`;
+                        }
+
                         tooltipContent += `Exercises:<br>`;
                         Object.entries(cell.exercises).forEach(([exercise, reps]) => {
                             tooltipContent += `&nbsp;&nbsp;${exercise}: ${reps}<br>`;
@@ -223,9 +241,62 @@ function createActivityChart(data, canvas) {
             dominantExercise: getDominantExercise(cellData)
         });
 
-        var color = getExerciseColor(cellData);
-        ctx.fillStyle = color;
-        ctx.fillRect(x, y, cellSize, cellSize);
+        // Check if there are exactly two exercises for this day
+        const exercises = cellData.exercises || {};
+        const exerciseNames = Object.keys(exercises);
+
+        if (exerciseNames.length === 2) {
+            // Split the square diagonally for two exercises
+            drawSplitSquare(x, y, cellSize, exercises, exerciseNames);
+        } else if (exerciseNames.length > 0) {
+            // Single color for one exercise or dominant exercise for more than two
+            var color = getExerciseColor(cellData);
+            ctx.fillStyle = color;
+            ctx.fillRect(x, y, cellSize, cellSize);
+        } else {
+            // No exercises - default color
+            ctx.fillStyle = '#ebedf0';
+            ctx.fillRect(x, y, cellSize, cellSize);
+        }
+    }
+
+    /**
+     * Draws a split square with two colors representing two exercises
+     * 
+     * @param {number} x - X coordinate of the square
+     * @param {number} y - Y coordinate of the square
+     * @param {number} size - Size of the square
+     * @param {Object} exercises - Object containing exercise names and rep counts
+     * @param {Array} exerciseNames - Array of exercise names
+     */
+    function drawSplitSquare(x, y, size, exercises, exerciseNames) {
+        const exercise1 = exerciseNames[0];
+        const exercise2 = exerciseNames[1];
+        const reps1 = exercises[exercise1];
+        const reps2 = exercises[exercise2];
+
+        const color1 = getColorForExercise(exercise1, reps1);
+        const color2 = getColorForExercise(exercise2, reps2);
+
+        // Draw the split square using triangles
+        ctx.beginPath();
+
+        // First triangle (top-left to bottom-right diagonal)
+        ctx.fillStyle = color1;
+        ctx.moveTo(x, y);
+        ctx.lineTo(x + size, y);
+        ctx.lineTo(x + size, y + size);
+        ctx.closePath();
+        ctx.fill();
+
+        // Second triangle (bottom-left to top-right diagonal)
+        ctx.fillStyle = color2;
+        ctx.beginPath();
+        ctx.moveTo(x, y);
+        ctx.lineTo(x, y + size);
+        ctx.lineTo(x + size, y + size);
+        ctx.closePath();
+        ctx.fill();
     }
 
     function computeDayOfWeekIndex(date) {
