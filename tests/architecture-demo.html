@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Modular Architecture Demo</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+        }
+
+        .test-section {
+            margin: 20px 0;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+
+        .pass {
+            color: green;
+        }
+
+        .fail {
+            color: red;
+        }
+
+        .info {
+            color: blue;
+        }
+
+        button {
+            margin: 5px;
+            padding: 10px;
+        }
+
+        #test-output {
+            background: #f5f5f5;
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 3px;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>Workout Tracker - Modular Architecture Demo</h1>
+
+    <div class="test-section">
+        <h2>1. Module Loading Test</h2>
+        <div id="module-loading-results"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>2. Error Handling Test</h2>
+        <button onclick="testErrorHandling()">Test Error Handling</button>
+        <div id="error-handling-results"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>3. Data Validation Test</h2>
+        <button onclick="testValidation()">Test Validation</button>
+        <div id="validation-results"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>4. Memory Management Test</h2>
+        <button onclick="testMemoryManagement()">Test Memory Management</button>
+        <div id="memory-results"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>5. Application Statistics</h2>
+        <button onclick="showStats()">Show App Stats</button>
+        <div id="stats-results"></div>
+    </div>
+
+    <div id="test-output"></div>
+
+    <!-- Load Chart.js for testing -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <!-- Load activity tracker -->
+    <script src="../activity-tracker.js"></script>
+
+    <!-- Load modules in dependency order -->
+    <script src="../js/NotificationManager.js"></script>
+    <script src="../js/ValidationManager.js"></script>
+    <script src="../js/WorkoutDataManager.js"></script>
+    <script src="../js/UIManager.js"></script>
+    <script src="../js/ChartManager.js"></script>
+    <script src="../js/CSVManager.js"></script>
+    <script src="../js/WorkoutTrackerApp.js"></script>
+
+    <script>
+        let testApp;
+
+        // Test module loading
+        function testModuleLoading() {
+            const results = document.getElementById('module-loading-results');
+            const modules = [
+                'NotificationManager',
+                'ValidationManager',
+                'WorkoutDataManager',
+                'UIManager',
+                'ChartManager',
+                'CSVManager',
+                'WorkoutTrackerApp'
+            ];
+
+            let html = '<h3>Module Loading Results:</h3><ul>';
+            let allPassed = true;
+
+            modules.forEach(moduleName => {
+                const exists = typeof window[moduleName] !== 'undefined';
+                const status = exists ? '<span class="pass">✅ LOADED</span>' : '<span class="fail">❌ FAILED</span>';
+                html += `<li>${moduleName}: ${status}</li>`;
+                if (!exists) allPassed = false;
+            });
+
+            html += '</ul>';
+
+            if (allPassed) {
+                html += '<p class="pass">✅ All modules loaded successfully!</p>';
+
+                // Try to instantiate the main app
+                try {
+                    testApp = new WorkoutTrackerApp();
+                    html += '<p class="pass">✅ Application instantiated successfully!</p>';
+                } catch (error) {
+                    html += `<p class="fail">❌ Application instantiation failed: ${error.message}</p>`;
+                }
+            } else {
+                html += '<p class="fail">❌ Some modules failed to load!</p>';
+            }
+
+            results.innerHTML = html;
+        }
+
+        // Test error handling
+        function testErrorHandling() {
+            const results = document.getElementById('error-handling-results');
+            let html = '<h3>Error Handling Test Results:</h3>';
+
+            try {
+                // Test notification manager
+                const notificationManager = new NotificationManager();
+                notificationManager.showError('Test error message', 2000);
+                notificationManager.showSuccess('Test success message', 2000);
+                notificationManager.showWarning('Test warning message', 2000);
+                notificationManager.showInfo('Test info message', 2000);
+
+                html += '<p class="pass">✅ Notification system working</p>';
+
+                // Test validation
+                const validationManager = new ValidationManager(notificationManager);
+                const validation = validationManager.validateWorkoutInput(-5, '', 'invalid');
+
+                if (!validation.isValid && validation.errors.length > 0) {
+                    html += '<p class="pass">✅ Validation system working</p>';
+                } else {
+                    html += '<p class="fail">❌ Validation system not working properly</p>';
+                }
+
+            } catch (error) {
+                html += `<p class="fail">❌ Error handling test failed: ${error.message}</p>`;
+            }
+
+            results.innerHTML = html;
+        }
+
+        // Test validation
+        function testValidation() {
+            const results = document.getElementById('validation-results');
+            let html = '<h3>Validation Test Results:</h3><ul>';
+
+            try {
+                const notificationManager = new NotificationManager();
+                const validationManager = new ValidationManager(notificationManager);
+
+                // Test valid input
+                const validTest = validationManager.validateWorkoutInput(25, 'Push-ups', 10);
+                html += `<li>Valid input: ${validTest.isValid ? '<span class="pass">✅ PASS</span>' : '<span class="fail">❌ FAIL</span>'}</li>`;
+
+                // Test invalid reps
+                const invalidReps = validationManager.validateWorkoutInput(-5, 'Push-ups', 10);
+                html += `<li>Invalid reps: ${!invalidReps.isValid ? '<span class="pass">✅ PASS</span>' : '<span class="fail">❌ FAIL</span>'}</li>`;
+
+                // Test invalid exercise
+                const invalidExercise = validationManager.validateWorkoutInput(25, '', 10);
+                html += `<li>Invalid exercise: ${!invalidExercise.isValid ? '<span class="pass">✅ PASS</span>' : '<span class="fail">❌ FAIL</span>'}</li>`;
+
+                // Test invalid weight
+                const invalidWeight = validationManager.validateWorkoutInput(25, 'Push-ups', -5);
+                html += `<li>Invalid weight: ${!invalidWeight.isValid ? '<span class="pass">✅ PASS</span>' : '<span class="fail">❌ FAIL</span>'}</li>`;
+
+            } catch (error) {
+                html += `<li class="fail">❌ Validation test failed: ${error.message}</li>`;
+            }
+
+            html += '</ul>';
+            results.innerHTML = html;
+        }
+
+        // Test memory management
+        function testMemoryManagement() {
+            const results = document.getElementById('memory-results');
+            let html = '<h3>Memory Management Test Results:</h3>';
+
+            try {
+                const notificationManager = new NotificationManager();
+                const dataManager = new WorkoutDataManager();
+                const chartManager = new ChartManager(dataManager, notificationManager);
+
+                // Test cleanup methods exist
+                if (typeof chartManager.cleanup === 'function') {
+                    html += '<p class="pass">✅ Chart cleanup method exists</p>';
+
+                    // Test cleanup doesn't throw errors
+                    chartManager.cleanup();
+                    html += '<p class="pass">✅ Chart cleanup executed successfully</p>';
+                } else {
+                    html += '<p class="fail">❌ Chart cleanup method missing</p>';
+                }
+
+            } catch (error) {
+                html += `<p class="fail">❌ Memory management test failed: ${error.message}</p>`;
+            }
+
+            results.innerHTML = html;
+        }
+
+        // Show application statistics
+        function showStats() {
+            const results = document.getElementById('stats-results');
+
+            if (testApp && typeof testApp.getStats === 'function') {
+                const stats = testApp.getStats();
+                let html = '<h3>Application Statistics:</h3><ul>';
+                html += `<li>Total Workouts: ${stats.totalWorkouts}</li>`;
+                html += `<li>Total Reps: ${stats.totalReps}</li>`;
+                html += `<li>Total Series: ${stats.totalSeries}</li>`;
+                html += `<li>Exercise Types: ${stats.exerciseTypes}</li>`;
+                html += `<li>Available Exercises: ${stats.exerciseTypesList.join(', ') || 'None'}</li>`;
+                html += '</ul>';
+                results.innerHTML = html;
+            } else {
+                results.innerHTML = '<p class="fail">❌ Application not initialized or stats method unavailable</p>';
+            }
+        }
+
+        // Run initial tests on page load
+        window.addEventListener('load', () => {
+            testModuleLoading();
+        });
+    </script>
+</body>
+
+</html>

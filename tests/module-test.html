@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Module Test</title>
+</head>
+
+<body>
+    <h1>Module Loading Test</h1>
+    <div id="test-results"></div>
+
+    <!-- Load modules in order -->
+    <script src="../js/NotificationManager.js"></script>
+    <script src="../js/ValidationManager.js"></script>
+    <script src="../js/WorkoutDataManager.js"></script>
+    <script src="../js/UIManager.js"></script>
+    <script src="../js/ChartManager.js"></script>
+    <script src="../js/CSVManager.js"></script>
+    <script src="../js/WorkoutTrackerApp.js"></script>
+
+    <script>
+        // Test module loading
+        const results = document.getElementById('test-results');
+        const tests = [];
+
+        // Test if classes are available
+        tests.push({ name: 'NotificationManager', result: typeof NotificationManager !== 'undefined' });
+        tests.push({ name: 'ValidationManager', result: typeof ValidationManager !== 'undefined' });
+        tests.push({ name: 'WorkoutDataManager', result: typeof WorkoutDataManager !== 'undefined' });
+        tests.push({ name: 'UIManager', result: typeof UIManager !== 'undefined' });
+        tests.push({ name: 'ChartManager', result: typeof ChartManager !== 'undefined' });
+        tests.push({ name: 'CSVManager', result: typeof CSVManager !== 'undefined' });
+        tests.push({ name: 'WorkoutTrackerApp', result: typeof WorkoutTrackerApp !== 'undefined' });
+
+        // Display results
+        let html = '<h2>Module Loading Results:</h2><ul>';
+        tests.forEach(test => {
+            const status = test.result ? '✅ PASS' : '❌ FAIL';
+            html += `<li>${test.name}: ${status}</li>`;
+        });
+        html += '</ul>';
+
+        // Test instantiation
+        try {
+            const notificationManager = new NotificationManager();
+            const validationManager = new ValidationManager(notificationManager);
+            const dataManager = new WorkoutDataManager();
+
+            html += '<h2>Instantiation Tests:</h2><ul>';
+            html += '<li>NotificationManager: ✅ PASS</li>';
+            html += '<li>ValidationManager: ✅ PASS</li>';
+            html += '<li>WorkoutDataManager: ✅ PASS</li>';
+            html += '</ul>';
+
+            // Test basic functionality
+            notificationManager.showSuccess('Test notification', 2000);
+
+        } catch (error) {
+            html += `<h2>Instantiation Error:</h2><p style="color: red;">${error.message}</p>`;
+        }
+
+        results.innerHTML = html;
+    </script>
+</body>
+
+</html>
