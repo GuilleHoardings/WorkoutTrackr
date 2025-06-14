@@ -41,14 +41,66 @@ class ChartManager {
             const exerciseTypes = this.dataManager.getUniqueExerciseTypes();
             const uniqueDates = this.getUniqueDates();
 
+            // Enhanced chart options with better styling
             const options = {
                 scales: {
                     y: {
-                        beginAtZero: true
+                        beginAtZero: true,
+                        grid: {
+                            color: '#e8e9ed',
+                            lineWidth: 1
+                        },
+                        ticks: {
+                            color: '#64748b',
+                            font: {
+                                family: 'Montserrat',
+                                size: 12
+                            }
+                        }
+                    },
+                    x: {
+                        grid: {
+                            color: '#e8e9ed',
+                            lineWidth: 1
+                        },
+                        ticks: {
+                            color: '#64748b',
+                            font: {
+                                family: 'Montserrat',
+                                size: 12
+                            },
+                            maxRotation: 45,
+                            minRotation: 0
+                        }
                     }
                 },
                 responsive: true,
-                maintainAspectRatio: false
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        labels: {
+                            font: {
+                                family: 'Montserrat',
+                                size: 13
+                            },
+                            color: '#374151',
+                            usePointStyle: true,
+                            pointStyle: 'circle'
+                        }
+                    },
+                    tooltip: {
+                        backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                        titleColor: '#fff',
+                        bodyColor: '#fff',
+                        borderColor: '#e5e7eb',
+                        borderWidth: 1,
+                        cornerRadius: 8,
+                        displayColors: true,
+                        font: {
+                            family: 'Montserrat'
+                        }
+                    }
+                }
             };
 
             // Create total reps chart
@@ -62,6 +114,9 @@ class ChartManager {
 
             // Create activity chart
             this.createActivityChart();
+
+            // Create weekly summary chart
+            this.createWeeklySummaryChart();
 
         } catch (error) {
             console.error("Error creating charts:", error);
@@ -90,9 +145,36 @@ class ChartManager {
             options: {
                 ...options,
                 plugins: {
+                    ...options.plugins,
                     title: {
                         display: true,
-                        text: 'Total Reps by Exercise'
+                        text: 'Total Reps by Exercise',
+                        font: {
+                            family: 'Montserrat',
+                            size: 16,
+                            weight: 'bold'
+                        },
+                        color: '#374151',
+                        padding: 20
+                    }
+                },
+                animation: {
+                    duration: 1500,
+                    easing: 'easeInOutQuart'
+                },
+                interaction: {
+                    intersect: false,
+                    mode: 'index'
+                },
+                scales: {
+                    ...options.scales,
+                    x: {
+                        ...options.scales.x,
+                        stacked: false
+                    },
+                    y: {
+                        ...options.scales.y,
+                        stacked: false
                     }
                 }
             }
@@ -122,9 +204,37 @@ class ChartManager {
             options: {
                 ...options,
                 plugins: {
+                    ...options.plugins,
                     title: {
                         display: true,
-                        text: 'Reps per Minute by Exercise'
+                        text: 'Reps per Minute by Exercise',
+                        font: {
+                            family: 'Montserrat',
+                            size: 16,
+                            weight: 'bold'
+                        },
+                        color: '#374151',
+                        padding: 20
+                    }
+                },
+                animation: {
+                    duration: 2000,
+                    easing: 'easeInOutQuart'
+                },
+                interaction: {
+                    intersect: false,
+                    mode: 'index'
+                },
+                elements: {
+                    point: {
+                        radius: 5,
+                        hoverRadius: 8,
+                        backgroundColor: '#fff',
+                        borderWidth: 2
+                    },
+                    line: {
+                        borderWidth: 3,
+                        tension: 0.2
                     }
                 }
             }
@@ -151,24 +261,48 @@ class ChartManager {
             options: {
                 scales: {
                     x: {
+                        grid: {
+                            color: '#e8e9ed',
+                            lineWidth: 1
+                        },
                         ticks: {
                             autoSkip: false,
                             maxRotation: 0,
                             minRotation: 0,
+                            color: '#64748b',
+                            font: {
+                                family: 'Montserrat',
+                                size: 11
+                            },
                             callback: function (val, index) {
                                 const label = this.getLabelForValue(val);
                                 if (!label) return '';
                                 const [year, month] = label.split('-');
+                                const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+                                    'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+                                const monthName = monthNames[parseInt(month) - 1];
+
                                 if (index === 0 || (monthlyChartData.labels[index - 1] &&
                                     monthlyChartData.labels[index - 1].split('-')[0] !== year)) {
-                                    return [`${month}`, year];
+                                    return [`${monthName}`, year];
                                 }
-                                return month;
+                                return monthName;
                             }
                         }
                     },
                     y: {
-                        beginAtZero: true
+                        beginAtZero: true,
+                        grid: {
+                            color: '#e8e9ed',
+                            lineWidth: 1
+                        },
+                        ticks: {
+                            color: '#64748b',
+                            font: {
+                                family: 'Montserrat',
+                                size: 12
+                            }
+                        }
                     }
                 },
                 responsive: true,
@@ -176,16 +310,64 @@ class ChartManager {
                 plugins: {
                     title: {
                         display: true,
-                        text: 'Monthly Progress'
+                        text: 'Monthly Progress',
+                        font: {
+                            family: 'Montserrat',
+                            size: 16,
+                            weight: 'bold'
+                        },
+                        color: '#374151',
+                        padding: 20
+                    },
+                    legend: {
+                        labels: {
+                            font: {
+                                family: 'Montserrat',
+                                size: 13
+                            },
+                            color: '#374151',
+                            usePointStyle: true,
+                            pointStyle: 'circle'
+                        }
+                    },
+                    tooltip: {
+                        backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                        titleColor: '#fff',
+                        bodyColor: '#fff',
+                        borderColor: '#e5e7eb',
+                        borderWidth: 1,
+                        cornerRadius: 8,
+                        displayColors: true,
+                        font: {
+                            family: 'Montserrat'
+                        },
+                        callbacks: {
+                            title: function (context) {
+                                const label = context[0].label;
+                                const [year, month] = label.split('-');
+                                const monthNames = ['January', 'February', 'March', 'April', 'May', 'June',
+                                    'July', 'August', 'September', 'October', 'November', 'December'];
+                                return `${monthNames[parseInt(month) - 1]} ${year}`;
+                            },
+                            label: function (context) {
+                                return `Total Reps: ${context.parsed.y}`;
+                            }
+                        }
                     }
+                },
+                animation: {
+                    duration: 1800,
+                    easing: 'easeInOutQuart'
+                },
+                interaction: {
+                    intersect: false,
+                    mode: 'index'
                 }
             }
         });
 
         this.charts.set('monthly', chart);
-    }
-
-    /**
+    }    /**
      * Create activity chart
      */
     createActivityChart() {
@@ -201,6 +383,112 @@ class ChartManager {
         if (typeof createActivityChart === 'function') {
             createActivityChart(activityData, canvas);
         }
+    }
+
+    /**
+     * Create weekly summary chart showing trends
+     */
+    createWeeklySummaryChart() {
+        const weeklyData = this.prepareWeeklyChartData();
+        const canvas = document.getElementById('weekly-summary-chart');
+
+        if (!canvas) {
+            console.warn("Weekly summary chart canvas not found");
+            return;
+        }
+
+        const chart = new Chart(canvas, {
+            type: 'line',
+            data: weeklyData,
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    title: {
+                        display: true,
+                        text: 'Weekly Progress Trends',
+                        font: {
+                            family: 'Montserrat',
+                            size: 16,
+                            weight: 'bold'
+                        },
+                        color: '#374151',
+                        padding: 20
+                    },
+                    legend: {
+                        labels: {
+                            font: {
+                                family: 'Montserrat',
+                                size: 13
+                            },
+                            color: '#374151',
+                            usePointStyle: true,
+                            pointStyle: 'circle'
+                        }
+                    },
+                    tooltip: {
+                        backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                        titleColor: '#fff',
+                        bodyColor: '#fff',
+                        borderColor: '#e5e7eb',
+                        borderWidth: 1,
+                        cornerRadius: 8,
+                        displayColors: true,
+                        font: {
+                            family: 'Montserrat'
+                        }
+                    }
+                },
+                scales: {
+                    x: {
+                        grid: {
+                            color: '#e8e9ed',
+                            lineWidth: 1
+                        },
+                        ticks: {
+                            color: '#64748b',
+                            font: {
+                                family: 'Montserrat',
+                                size: 12
+                            }
+                        }
+                    },
+                    y: {
+                        beginAtZero: true,
+                        grid: {
+                            color: '#e8e9ed',
+                            lineWidth: 1
+                        },
+                        ticks: {
+                            color: '#64748b',
+                            font: {
+                                family: 'Montserrat',
+                                size: 12
+                            }
+                        }
+                    }
+                },
+                elements: {
+                    point: {
+                        radius: 4,
+                        hoverRadius: 6,
+                        backgroundColor: '#fff',
+                        borderWidth: 2
+                    },
+                    line: {
+                        borderWidth: 3,
+                        tension: 0.3,
+                        fill: true
+                    }
+                },
+                animation: {
+                    duration: 2000,
+                    easing: 'easeInOutQuart'
+                }
+            }
+        });
+
+        this.charts.set('weeklySummary', chart);
     }
 
     /**
@@ -239,6 +527,15 @@ class ChartManager {
             // Update activity chart
             this.createActivityChart();
 
+            // Update weekly summary chart
+            const weeklySummaryChart = this.charts.get('weeklySummary');
+            if (weeklySummaryChart) {
+                const weeklyChartData = this.prepareWeeklyChartData();
+                weeklySummaryChart.data.labels = weeklyChartData.labels;
+                weeklySummaryChart.data.datasets = weeklyChartData.datasets;
+                weeklySummaryChart.update();
+            }
+
         } catch (error) {
             console.error("Error updating charts:", error);
             this.notificationManager.showWarning("Failed to update charts.");
@@ -271,27 +568,144 @@ class ChartManager {
             // Fill in data for all dates (with nulls for missing dates)
             const valueData = uniqueDates.map(date => dateToValue[date] || null);
 
+            // Get base color for this exercise
+            const baseColor = colorScale[index % colorScale.length];
+
             // Create appropriate dataset based on chart type
             if (isRepsPerMinute) {
                 datasets.push({
                     label: exerciseType,
                     data: valueData,
                     fill: false,
-                    borderColor: colorScale[index % colorScale.length],
-                    tension: 0.1
+                    borderColor: baseColor,
+                    backgroundColor: baseColor,
+                    tension: 0.2,
+                    pointBackgroundColor: '#fff',
+                    pointBorderColor: baseColor,
+                    pointBorderWidth: 2,
+                    pointRadius: 4,
+                    pointHoverRadius: 6,
+                    pointHoverBackgroundColor: baseColor,
+                    pointHoverBorderColor: '#fff',
+                    pointHoverBorderWidth: 2
                 });
             } else {
-                datasets.push({
-                    label: exerciseType,
-                    data: valueData,
-                    backgroundColor: colorScale[index % colorScale.length],
-                    borderColor: colorScale[index % colorScale.length],
-                    borderWidth: 1
-                });
+                // Create gradient for bar charts
+                const canvas = document.getElementById("reps-chart");
+                if (canvas) {
+                    const ctx = canvas.getContext('2d');
+                    const gradient = ctx.createLinearGradient(0, 0, 0, 400);
+
+                    // Convert color to valid format for gradients
+                    const validColor = this.convertToValidColor(baseColor);
+                    const validOpacityColor = this.adjustColorOpacity(validColor, 0.6);
+
+                    gradient.addColorStop(0, validColor);
+                    gradient.addColorStop(1, validOpacityColor);
+
+                    datasets.push({
+                        label: exerciseType,
+                        data: valueData,
+                        backgroundColor: gradient,
+                        borderColor: validColor,
+                        borderWidth: 2,
+                        borderRadius: 4,
+                        borderSkipped: false,
+                        hoverBackgroundColor: this.adjustColorOpacity(validColor, 0.8),
+                        hoverBorderColor: validColor,
+                        hoverBorderWidth: 3
+                    });
+                } else {
+                    // Fallback without gradient
+                    const validColor = this.convertToValidColor(baseColor);
+                    datasets.push({
+                        label: exerciseType,
+                        data: valueData,
+                        backgroundColor: this.adjustColorOpacity(validColor, 0.7),
+                        borderColor: validColor,
+                        borderWidth: 2,
+                        borderRadius: 4
+                    });
+                }
             }
         });
 
         return datasets;
+    }    /**
+     * Adjust color opacity
+     */
+    adjustColorOpacity(color, opacity) {
+        // Convert hex to rgba
+        if (color.startsWith('#')) {
+            const hex = color.replace('#', '');
+            const r = parseInt(hex.substr(0, 2), 16);
+            const g = parseInt(hex.substr(2, 2), 16);
+            const b = parseInt(hex.substr(4, 2), 16);
+            return `rgba(${r}, ${g}, ${b}, ${opacity})`;
+        }
+        // Handle existing rgba
+        else if (color.startsWith('rgba')) {
+            return color.replace(/[\d\.]+\)$/, `${opacity})`);
+        }
+        // Handle rgb
+        else if (color.startsWith('rgb')) {
+            return color.replace('rgb', 'rgba').replace(')', `, ${opacity})`);
+        }
+        // Handle hsla
+        else if (color.startsWith('hsla')) {
+            return color.replace(/[\d\.]+\)$/, `${opacity})`);
+        }
+        // Handle hsl - convert to hsla
+        else if (color.startsWith('hsl')) {
+            return color.replace('hsl', 'hsla').replace(')', `, ${opacity})`);
+        }
+        // Fallback - return original color
+        return color;
+    }
+
+    /**
+     * Convert any color to a valid hex color for gradients
+     */
+    convertToValidColor(color) {
+        // If it's already a hex color, return as is
+        if (color.startsWith('#')) {
+            return color;
+        }
+
+        // For HSL colors, convert to RGB first then to hex
+        if (color.startsWith('hsl')) {
+            // Create a temporary element to use browser's color parsing
+            const temp = document.createElement('div');
+            temp.style.color = color;
+            document.body.appendChild(temp);
+            const computedColor = window.getComputedStyle(temp).color;
+            document.body.removeChild(temp);
+
+            // Convert rgb to hex
+            if (computedColor.startsWith('rgb')) {
+                const matches = computedColor.match(/\d+/g);
+                if (matches && matches.length >= 3) {
+                    const r = parseInt(matches[0]);
+                    const g = parseInt(matches[1]);
+                    const b = parseInt(matches[2]);
+                    return `#${r.toString(16).padStart(2, '0')}${g.toString(16).padStart(2, '0')}${b.toString(16).padStart(2, '0')}`;
+                }
+            }
+        }
+
+        // For RGB colors, convert to hex
+        if (color.startsWith('rgb')) {
+            const matches = color.match(/\d+/g);
+            if (matches && matches.length >= 3) {
+                const r = parseInt(matches[0]);
+                const g = parseInt(matches[1]);
+                const b = parseInt(matches[2]);
+                return `#${r.toString(16).padStart(2, '0')}${g.toString(16).padStart(2, '0')}${b.toString(16).padStart(2, '0')}`;
+            }
+        }
+
+        // Fallback to a default color
+        return '#3B82F6';
     }
 
     /**
@@ -326,9 +740,7 @@ class ChartManager {
             for (let month = 1; month <= monthLimit; month++) {
                 allMonths.push(`${year}-${month}`);
             }
-        }
-
-        // Sort the months chronologically
+        }        // Sort the months chronologically
         allMonths.sort((a, b) => {
             const [yearA, monthA] = a.split('-').map(Number);
             const [yearB, monthB] = b.split('-').map(Number);
@@ -397,6 +809,95 @@ class ChartManager {
     }
 
     /**
+     * Prepare weekly chart data
+     */
+    prepareWeeklyChartData() {
+        const workouts = this.dataManager.getAllWorkouts();
+        const weeklyData = {};
+
+        workouts.forEach(workout => {
+            const date = new Date(workout.date);
+            const year = date.getFullYear();
+            const week = this.getWeekNumber(date);
+            const key = `${year}-W${week.toString().padStart(2, '0')}`;
+
+            if (!weeklyData[key]) {
+                weeklyData[key] = {
+                    week: key,
+                    totalReps: 0,
+                    workoutDays: new Set(),
+                    exercises: new Set()
+                };
+            }
+
+            weeklyData[key].totalReps += workout.totalReps;
+            weeklyData[key].workoutDays.add(workout.dateString);
+            weeklyData[key].exercises.add(workout.exercise);
+        });
+
+        // Convert to arrays and sort
+        const sortedWeeks = Object.values(weeklyData)
+            .sort((a, b) => a.week.localeCompare(b.week))
+            .slice(-12); // Last 12 weeks
+
+        const labels = sortedWeeks.map(w => w.week);
+        const totalRepsData = sortedWeeks.map(w => w.totalReps);
+        const workoutDaysData = sortedWeeks.map(w => w.workoutDays.size);
+
+        return {
+            labels: labels,
+            datasets: [
+                {
+                    label: 'Total Reps',
+                    data: totalRepsData,
+                    borderColor: '#3B82F6',
+                    backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                    yAxisID: 'y'
+                },
+                {
+                    label: 'Workout Days',
+                    data: workoutDaysData,
+                    borderColor: '#10B981',
+                    backgroundColor: 'rgba(16, 185, 129, 0.1)',
+                    yAxisID: 'y1'
+                }
+            ]
+        };
+    }
+
+    /**
+     * Get week number for a date
+     */
+    getWeekNumber(date) {
+        const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
+        const dayNum = d.getUTCDay() || 7;
+        d.setUTCDate(d.getUTCDate() + 4 - dayNum);
+        const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
+        return Math.ceil((((d - yearStart) / 86400000) + 1) / 7);
+    }
+
+    /**
+     * Get unique dates from all workouts
+     */
+    getUniqueDates() {
+        const workouts = this.dataManager.getAllWorkouts();
+        const dateStrings = [...new Set(workouts.map(workout => workout.dateString))];
+
+        // Sort by actual date values instead of string comparison
+        return dateStrings.sort((a, b) => new Date(a) - new Date(b)).map(dateString => {
+            const date = new Date(dateString);
+            return this.createShortFormattedDate(date);
+        });
+    }
+
+    /**
+     * Create short formatted date
+     */
+    createShortFormattedDate(date) {
+        return new Intl.DateTimeFormat().format(date);
+    }
+
+    /**
      * Aggregate data by month
      */
     aggregateDataByMonth() {
@@ -427,25 +928,6 @@ class ChartManager {
     }
 
     /**
-     * Get unique dates from all workouts
-     */
-    getUniqueDates() {
-        const workouts = this.dataManager.getAllWorkouts();
-        const dateStrings = [...new Set(workouts.map(workout => workout.dateString))];
-
-        // Sort by actual date values instead of string comparison
-        return dateStrings.sort((a, b) => new Date(a) - new Date(b)).map(dateString => {
-            const date = new Date(dateString);
-            return this.createShortFormattedDate(date);
-        });
-    }
-
-    /**
-     * Create short formatted date
-     */
-    createShortFormattedDate(date) {
-        return new Intl.DateTimeFormat().format(date);
-    }    /**
      * Generate color scale for charts
      */
     generateColorScale(count) {
@@ -454,11 +936,20 @@ class ChartManager {
             return generateColorScale(count);
         }
 
-        // Fallback color scale
+        // Enhanced color palette with better contrast and visual appeal
         const colors = [
-            '#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0',
-            '#9966FF', '#FF9F40', '#FF6384', '#C9CBCF',
-            '#FF9F40', '#FFCD56', '#4BC0C0', '#36A2EB'
+            '#3B82F6', // Blue
+            '#EF4444', // Red  
+            '#10B981', // Green
+            '#F59E0B', // Amber
+            '#8B5CF6', // Violet
+            '#06B6D4', // Cyan
+            '#F97316', // Orange
+            '#84CC16', // Lime
+            '#EC4899', // Pink
+            '#6366F1', // Indigo
+            '#14B8A6', // Teal
+            '#F43F5E'  // Rose
         ];
 
         // Generate additional colors if needed
@@ -467,9 +958,11 @@ class ChartManager {
             if (i < colors.length) {
                 result.push(colors[i]);
             } else {
-                // Generate HSL colors for additional entries
-                const hue = (i * 360 / count) % 360;
-                result.push(`hsla(${hue}, 70%, 60%, 0.7)`);
+                // Generate HSL colors for additional entries with better distribution
+                const hue = (i * 137.5) % 360; // Using golden angle for better distribution
+                const saturation = 70 + (i % 3) * 10; // Vary saturation slightly
+                const lightness = 50 + (i % 2) * 10;  // Vary lightness slightly
+                result.push(`hsl(${hue}, ${saturation}%, ${lightness}%)`);
             }
         }
 

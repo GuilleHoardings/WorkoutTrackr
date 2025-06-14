@@ -171,61 +171,82 @@ tr:nth-child(even) {
 .chart-container {
     width: 95%;
     min-width: 300px;
-    max-height: 350px;
-    height: 200px;
-    margin-bottom: 20px;
+    max-height: 400px;
+    height: 250px;
+    margin-bottom: 25px;
+    padding: 20px;
+    background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
+    border-radius: 12px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+    border: 1px solid rgba(226, 232, 240, 0.8);
+    position: relative;
+    overflow: hidden;
+}
+
+/* Specific override for calendar container to allow full height display */
+#calendar.chart-container {
+    height: auto !important;
+    max-height: none !important;
+    overflow: visible !important;
+    min-height: 200px;
+}
+
+.chart-container::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background: linear-gradient(90deg, #3B82F6, #10B981, #F59E0B);
+    border-radius: 12px 12px 0 0;
 }
 
 /* Specific styling for the total reps and reps per minute charts */
 #reps-chart, #reps-per-minute-chart {
+    max-height: 450px;
+    height: 450px;
+}
+
+/* Monthly chart styling */
+#reps-per-month-chart {
     max-height: 400px;
     height: 400px;
 }
 
-/* Calendar chart */
+/* Calendar chart - inherits styling from .chart-container but with height overrides */
 #calendar {
+    display: block !important;
+    height: auto !important;
+    max-height: none !important;
+    overflow: visible !important;
+    min-height: 200px;
+    /* All other styling inherited from chart-container */
+}
+
+/* Double-specific override to ensure calendar height is not constrained */
+div#calendar.chart-container {
+    height: auto !important;
+    max-height: none !important;
+    overflow: visible !important;
+}
+
+#calendar::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background: linear-gradient(90deg, #8B5CF6, #EC4899, #F43F5E);
+    border-radius: 12px 12px 0 0;
+}
+
+#activity {
+    margin: 10px auto;
     display: block;
-    box-sizing: border-box;
-    height: 150px;
-    width: 100%;
-    margin-bottom: 20px;
-}
-
-/* Activity chart legend */
-.activity-legend {
-    margin-top: 15px;
-    padding: 10px;
-    background-color: #f9f9f9;
-    border-radius: 5px;
-    border: 1px solid #ddd;
-}
-
-.legend-title {
-    font-weight: 600;
-    color: #36454f;
-    margin-bottom: 8px;
-    font-size: 14px;
-}
-
-.legend-items {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 10px;
-}
-
-.legend-item {
-    display: flex;
-    align-items: center;
-    gap: 5px;
-    font-size: 12px;
-    color: #666;
-}
-
-.legend-color {
-    width: 12px;
-    height: 12px;
-    border-radius: 2px;
-    border: 1px solid #ccc;
+    border-radius: 4px;
+    cursor: crosshair;
 }
 
 /* Layout for the form container */
@@ -423,4 +444,105 @@ input#weight, input#reps {
 
 .csv-controls button {
     margin-top: 0;
+}
+
+/* Activity chart legend */
+.activity-legend {
+    margin-top: 20px;
+    padding: 15px;
+    background: #fff;
+    border-radius: 4px;
+    border: 1px solid #ddd;
+}
+
+.legend-title {
+    font-weight: 500;
+    color: #333;
+    margin-bottom: 10px;
+    font-size: 14px;
+}
+
+.legend-items {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+    gap: 8px;
+}
+
+.legend-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    color: #666;
+}
+
+.legend-color {
+    width: 14px;
+    height: 14px;
+    border-radius: 3px;
+    border: 1px solid rgba(255, 255, 255, 0.5);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    flex-shrink: 0;
+}
+
+/* Responsive design for charts */
+@media (max-width: 768px) {
+    .chart-container {
+        width: 100%;
+        padding: 15px;
+        margin-bottom: 20px;
+    }
+
+    #reps-chart, #reps-per-minute-chart {
+        height: 300px;
+        max-height: 300px;
+    }
+
+    #reps-per-month-chart, #weekly-summary-chart {
+        height: 250px;
+        max-height: 250px;
+    }
+
+    #calendar {
+        padding: 15px;
+        min-height: 150px;
+        height: auto !important;
+        max-height: none !important;
+        overflow: visible !important;
+    }
+
+    .legend-items {
+        grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+        gap: 8px;
+    }
+
+    .legend-item {
+        font-size: 12px;
+        padding: 4px 6px;
+    }
+
+    .legend-color {
+        width: 12px;
+        height: 12px;
+    }
+}
+
+@media (max-width: 480px) {
+    .chart-container {
+        padding: 10px;
+    }
+
+    #reps-chart, #reps-per-minute-chart {
+        height: 250px;
+        max-height: 250px;
+    }
+
+    #reps-per-month-chart, #weekly-summary-chart {
+        height: 200px;
+        max-height: 200px;
+    }
+
+    .legend-items {
+        grid-template-columns: 1fr 1fr;
+    }
 }

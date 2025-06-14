@@ -136,30 +136,51 @@ function getDominantExercise(cellData) {
  * @param {HTMLCanvasElement} canvas - The canvas element to render the activity chart on.
  */
 function createActivityChart(data, canvas) {
-    // Get the range of years
-    const minYear = new Date(data[0].date).getFullYear();
-    const maxYear = new Date(data[data.length - 1].date).getFullYear();
-    const numYears = maxYear - minYear + 1;
+    // Check if data is available
+    if (!data || data.length === 0) {
+        console.warn("No data available for activity chart");
+        return;
+    }    // Get the range of years by examining all data points
+    const years = data.map(d => new Date(d.date).getFullYear());
+    const minYear = Math.min(...years);
+    const maxYear = Math.max(...years);
+    const numYears = maxYear - minYear + 1; var ctx = canvas.getContext('2d');
 
-    var ctx = canvas.getContext('2d');
-
-    const cellSize = 10;
+    // Clean styling constants
+    const cellSize = 11;
     const padding = 2;
-    const yearPadding = 10;
-    const yearTextSize = 25;
-    const monthTextSize = 15;
+    const yearPadding = 20;
+    const yearTextSize = 16;
+    const monthTextSize = 16;
     const weeksInYear = 53;
     const daysInWeek = 7;
-    const yearLabelHeight = yearTextSize + monthTextSize;
+    const yearLabelHeight = yearTextSize + monthTextSize + 10;
     const yearWidth = weeksInYear * cellSize + padding * (weeksInYear + 1);
-    const yearHeight = daysInWeek * cellSize + padding * (daysInWeek + 1) + yearLabelHeight;
+    const yearHeight = daysInWeek * cellSize + padding * (daysInWeek + 1) + yearLabelHeight;    // Calculate required canvas dimensions
+    const requiredWidth = yearWidth + 40; // Extra padding
 
-    canvas.width = yearWidth;
-    canvas.height = numYears * yearHeight + yearPadding * 4;
+    // Fix: Calculate the exact space needed for all years
+    // For the last year (oldest), yYearStart = (numYears-1) * yearHeight + numYears * yearPadding + yearLabelHeight
+    // The grid extends from yYearStart to yYearStart + (7 * (cellSize + padding))
+    // We also need space above yYearStart for the year label (yearTextSize + monthTextSize + 10)
+    const lastYearStart = (numYears - 1) * yearHeight + numYears * yearPadding + yearLabelHeight;
+    const gridHeight = daysInWeek * (cellSize + padding) + padding; // Height of the grid itself
+    const requiredHeight = lastYearStart + gridHeight + 40; // Add extra bottom padding
 
-    for (var absYear = minYear; absYear <= maxYear; absYear++) {
+    // Set high DPI scaling for crisp rendering
+    const dpr = window.devicePixelRatio || 1;
+
+    // Set canvas internal resolution for crisp rendering
+    canvas.width = requiredWidth * dpr;
+    canvas.height = requiredHeight * dpr;    // Set canvas display size
+    canvas.style.width = requiredWidth + 'px';
+    canvas.style.height = requiredHeight + 'px';
+
+    // Scale the drawing context for DPI
+    ctx.scale(dpr, dpr); for (var absYear = minYear; absYear <= maxYear; absYear++) {
         const relativeYear = maxYear - absYear;
         const yYearStart = relativeYear * yearHeight + (relativeYear + 1) * yearPadding + yearLabelHeight;
+
         printYearLabels(yYearStart);
         drawGrid(yYearStart);
     }
@@ -226,8 +247,8 @@ function createActivityChart(data, canvas) {
         const relativeYear = maxYear - date.getFullYear();
         let dayOfWeekIndex = computeDayOfWeekIndex(date);
         const week = weeksFromYearStart(date);
-        const x = week * cellSize + padding * (week + 1);
-        const y = dayOfWeekIndex * cellSize + padding * (dayOfWeekIndex + 1) + relativeYear * yearHeight + (relativeYear + 1) * yearPadding + yearLabelHeight;
+        const x = week * (cellSize + padding) + padding;
+        const y = dayOfWeekIndex * (cellSize + padding) + padding + relativeYear * yearHeight + (relativeYear + 1) * yearPadding + yearLabelHeight;
 
         // Store cell data with its position and dimensions
         cellMap.set(`${x},${y}`, {
@@ -243,14 +264,14 @@ function createActivityChart(data, canvas) {
 
         // Check if there are exactly two exercises for this day
         const exercises = cellData.exercises || {};
-        const exerciseNames = Object.keys(exercises);
-
-        if (exerciseNames.length === 2) {
+        const exerciseNames = Object.keys(exercises); if (exerciseNames.length === 2) {
             // Split the square diagonally for two exercises
             drawSplitSquare(x, y, cellSize, exercises, exerciseNames);
         } else if (exerciseNames.length > 0) {
             // Single color for one exercise or dominant exercise for more than two
             var color = getExerciseColor(cellData);
+
+            // Draw main cell - simple and clean
             ctx.fillStyle = color;
             ctx.fillRect(x, y, cellSize, cellSize);
         } else {
@@ -268,8 +289,7 @@ function createActivityChart(data, canvas) {
      * @param {number} size - Size of the square
      * @param {Object} exercises - Object containing exercise names and rep counts
      * @param {Array} exerciseNames - Array of exercise names
-     */
-    function drawSplitSquare(x, y, size, exercises, exerciseNames) {
+     */    function drawSplitSquare(x, y, size, exercises, exerciseNames) {
         const exercise1 = exerciseNames[0];
         const exercise2 = exerciseNames[1];
         const reps1 = exercises[exercise1];
@@ -278,10 +298,11 @@ function createActivityChart(data, canvas) {
         const color1 = getColorForExercise(exercise1, reps1);
         const color2 = getColorForExercise(exercise2, reps2);
 
-        // Draw the split square using triangles
-        ctx.beginPath();
+        // Draw the split square using triangles - clean and simple
+        ctx.save();
 
         // First triangle (top-left to bottom-right diagonal)
+        ctx.beginPath();
         ctx.fillStyle = color1;
         ctx.moveTo(x, y);
         ctx.lineTo(x + size, y);
@@ -297,6 +318,8 @@ function createActivityChart(data, canvas) {
         ctx.lineTo(x + size, y + size);
         ctx.closePath();
         ctx.fill();
+
+        ctx.restore();
     }
 
     function computeDayOfWeekIndex(date) {
@@ -306,46 +329,61 @@ function createActivityChart(data, canvas) {
         } else {
             return dayOfWeekIndex - 1;
         }
-    }
-
-    function createTooltip() {
+    } function createTooltip() {
         let tooltip = document.createElement('div');
         tooltip.style.position = 'absolute';
         tooltip.style.display = 'none';
         tooltip.style.background = 'rgba(0, 0, 0, 0.8)';
         tooltip.style.color = 'white';
-        tooltip.style.padding = '5px';
-        tooltip.style.borderRadius = '3px';
+        tooltip.style.padding = '8px 12px';
+        tooltip.style.borderRadius = '4px';
         tooltip.style.fontSize = '12px';
+        tooltip.style.fontFamily = 'system-ui, sans-serif';
+        tooltip.style.lineHeight = '1.4';
+        tooltip.style.zIndex = '1000';
+        tooltip.style.pointerEvents = 'none';
+
         document.body.appendChild(tooltip);
         return tooltip;
-    }
+    } function printYearLabels(yYearStart) {
+        ctx.fillStyle = '#666';
+        ctx.font = '12px system-ui, sans-serif';
+        ctx.textAlign = 'left';
+        ctx.fillText(absYear, padding + 5, yYearStart - monthTextSize - 5);
+    } function drawGrid(yYearStart) {
+        // Month names display
+        const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+            'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
-    function printYearLabels(yYearStart) {
+        // Draw day labels (Mon, Wed, Fri)
+        const dayLabels = ['M', 'W', 'F'];
         ctx.fillStyle = '#888';
-        ctx.font = 'bold 10px sans-serif';
-        ctx.fillText(absYear, padding, yYearStart - monthTextSize);
-    }
+        ctx.font = '10px system-ui, sans-serif';
+        ctx.textAlign = 'right';
 
-    function drawGrid(yYearStart) {
-        // Define an array of month names each two months
-        const monthNames = ['Jan', 'Mar', 'May', 'Jul', 'Sep', 'Nov']
-
-        for (var i = 0; i < 53; i++) {
+        for (let i = 0; i < dayLabels.length; i++) {
+            const dayIndex = i * 2 + 1; // Mon=1, Wed=3, Fri=5
+            const y = dayIndex * cellSize + padding * (dayIndex + 1) + yYearStart + cellSize / 2 + 3;
+            ctx.fillText(dayLabels[i], padding - 5, y);
+        } for (var i = 0; i < 53; i++) {
             // Draw the month names
-            if (i % 9 === 0) {
-                const month = Math.floor(i / 9);
-                ctx.fillStyle = '#888';
-                ctx.font = 'bold 10px sans-serif';
-                ctx.fillText(monthNames[month], i * cellSize + padding * (i + 1), yYearStart);
-            }
-
-            ctx.fillStyle = '#ddd';
+            if (i % 4 === 0 && i < 48) { // Every 4 weeks, show month
+                const monthIndex = Math.min(Math.floor(i / 4.33), 11);
+                ctx.fillStyle = '#666';
+                ctx.font = '11px system-ui, sans-serif';
+                ctx.textAlign = 'left';
+                ctx.fillText(monthNames[monthIndex], i * (cellSize + padding) + padding, yYearStart - 5);
+            }// Draw clean grid cells
             for (var j = 0; j < 7; j++) {
-                const x = i * cellSize + padding * (i + 1);
-                const y = j * cellSize + padding * (j + 1) + yYearStart;
+                const x = i * (cellSize + padding) + padding;
+                const y = j * (cellSize + padding) + padding + yYearStart;
+
+                // Draw simple background cell
+                ctx.fillStyle = '#ebedf0';
                 ctx.fillRect(x, y, cellSize, cellSize);
             }
         }
+
+        ctx.textAlign = 'left'; // Reset text alignment
     }
 }
