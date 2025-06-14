@@ -5,6 +5,31 @@ const repsInput = document.getElementById("reps");
 const weightInput = document.getElementById("weight");
 const exerciseSelect = document.getElementById("exercise-select");
 
+// Validate that all essential DOM elements exist
+function validateEssentialElements() {
+    const essentialElements = {
+        'workout-form': exerciseForm,
+        'reps': repsInput,
+        'weight': weightInput,
+        'exercise-select': exerciseSelect
+    };
+
+    const missingElements = [];
+    for (const [id, element] of Object.entries(essentialElements)) {
+        if (!element) {
+            missingElements.push(id);
+        }
+    }
+
+    if (missingElements.length > 0) {
+        console.error("Missing essential DOM elements:", missingElements);
+        showErrorMessage(`Application error: Missing required elements (${missingElements.join(', ')}). Please refresh the page.`);
+        return false;
+    }
+
+    return true;
+}
+
 // Variables to store exercise data and charts
 let workoutsData = [];
 let chartTotalReps, chartRepsPerMinute, chartRepsPerMonth, chartActivity;
@@ -15,20 +40,70 @@ const DATA_VERSION_V2 = 2; // Series support
 const DATA_VERSION_V3 = 3; // Multiple exercise types support
 const CURRENT_DATA_VERSION = DATA_VERSION_V3;
 
+// Function to show error messages to the user
+function showErrorMessage(message, type = 'error') {
+    const existingAlert = document.querySelector('.alert-message');
+    if (existingAlert) {
+        existingAlert.remove();
+    }
+
+    const alertDiv = document.createElement('div');
+    alertDiv.className = `alert-message alert-${type}`;
+    alertDiv.textContent = message;
+    alertDiv.style.cssText = `
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        padding: 15px;
+        border-radius: 5px;
+        color: white;
+        z-index: 1000;
+        max-width: 300px;
+        background-color: ${type === 'error' ? '#dc3545' : type === 'success' ? '#28a745' : '#17a2b8'};
+    `;
+
+    document.body.appendChild(alertDiv);
+
+    // Auto-remove after 5 seconds
+    setTimeout(() => {
+        if (alertDiv && alertDiv.parentNode) {
+            alertDiv.remove();
+        }
+    }, 5000);
+}
+
 // Function to load data from localStorage
 function loadWorkoutData() {
-    // First try to load from the current storage key
-    if (localStorage.getItem("workoutData")) {
-        const storedData = JSON.parse(localStorage.getItem("workoutData"));
-        processStoredData(storedData, "workoutData");
-    }
-    // Check for legacy data storage key for backward compatibility
-    else if (localStorage.getItem("pushUpsData")) {
-        const storedData = JSON.parse(localStorage.getItem("pushUpsData"));
-        processStoredData(storedData, "pushUpsData");
+    try {
+        // First try to load from the current storage key
+        if (localStorage.getItem("workoutData")) {
+            const storedDataStr = localStorage.getItem("workoutData");
+            if (!storedDataStr.trim()) {
+                throw new Error("Stored data is empty");
+            }
+            const storedData = JSON.parse(storedDataStr);
+            processStoredData(storedData, "workoutData");
+        }
+        // Check for legacy data storage key for backward compatibility
+        else if (localStorage.getItem("pushUpsData")) {
+            const storedDataStr = localStorage.getItem("pushUpsData");
+            if (!storedDataStr.trim()) {
+                throw new Error("Legacy data is empty");
+            }
+            const storedData = JSON.parse(storedDataStr);
+            processStoredData(storedData, "pushUpsData");
 
-        // After successfully migrating, remove the old data
-        localStorage.removeItem("pushUpsData");
+            // After successfully migrating, remove the old data
+            try {
+                localStorage.removeItem("pushUpsData");
+            } catch (removeError) {
+                console.warn("Could not remove legacy data:", removeError);
+            }
+        }
+    } catch (error) {
+        console.error("Error loading workout data:", error);
+        workoutsData = [];
+        showErrorMessage("Failed to load saved data. Starting with empty workout list.");
     }
 
     // Initialize UI with the loaded data
@@ -37,30 +112,41 @@ function loadWorkoutData() {
 
 // Process stored data and handle different format versions
 function processStoredData(storedData, storageKey) {
-    // Check if the stored data is an array (original format)
-    if (Array.isArray(storedData)) {
-        const migratedData = migrateArrayToV2Format(storedData);
-        localStorage.setItem("workoutData", JSON.stringify(migratedData));
-        workoutsData = migratedData.data;
-    }
-    // Check if it's v1 format
-    else if (storedData.version === DATA_VERSION_V1) {
-        const migratedData = migrateV1ToV2Format(storedData);
-        localStorage.setItem("workoutData", JSON.stringify(migratedData));
-        workoutsData = migratedData.data;
-    }
-    // Already v2 or v3 format
-    else if (storedData.version === DATA_VERSION_V2 || storedData.version === DATA_VERSION_V3) {
-        workoutsData = storedData.data || [];
-
-        // If loading from legacy storage key, save to new key
-        if (storageKey !== "workoutData") {
-            localStorage.setItem("workoutData", JSON.stringify(storedData));
+    try {
+        // Check if the stored data is an array (original format)
+        if (Array.isArray(storedData)) {
+            const migratedData = migrateArrayToV2Format(storedData);
+            localStorage.setItem("workoutData", JSON.stringify(migratedData));
+            workoutsData = migratedData.data;
         }
-    }
-    // Unknown format - use empty array
-    else {
+        // Check if it's v1 format
+        else if (storedData.version === DATA_VERSION_V1) {
+            const migratedData = migrateV1ToV2Format(storedData);
+            localStorage.setItem("workoutData", JSON.stringify(migratedData));
+            workoutsData = migratedData.data;
+        }
+        // Already v2 or v3 format
+        else if (storedData.version === DATA_VERSION_V2 || storedData.version === DATA_VERSION_V3) {
+            workoutsData = storedData.data || [];
+
+            // If loading from legacy storage key, save to new key
+            if (storageKey !== "workoutData") {
+                try {
+                    localStorage.setItem("workoutData", JSON.stringify(storedData));
+                } catch (saveError) {
+                    console.warn("Could not save migrated data:", saveError);
+                }
+            }
+        }
+        // Unknown format - use empty array
+        else {
+            console.warn("Unknown data format, starting with empty array");
+            workoutsData = [];
+        }
+    } catch (error) {
+        console.error("Error processing stored data:", error);
         workoutsData = [];
+        showErrorMessage("Failed to process stored data. Starting with empty workout list.");
     }
 
     return workoutsData;
@@ -68,6 +154,10 @@ function processStoredData(storedData, storageKey) {
 
 // Initialize the UI with the loaded data
 function initializeUI() {
+    if (!validateEssentialElements()) {
+        return;
+    }
+
     if (workoutsData.length > 0) {
         updateWorkoutTable();
         createOrUpdateCharts();
@@ -76,18 +166,28 @@ function initializeUI() {
 
 // Update workout table to use a list with collapsible items
 function updateWorkoutTable() {
-    // Clear the current list
-    const workoutListContainer = document.getElementById('workout-list-container');
-    workoutListContainer.innerHTML = '';
+    try {
+        // Clear the current list
+        const workoutListContainer = document.getElementById('workout-list-container');
+        if (!workoutListContainer) {
+            console.error("Workout list container not found");
+            return;
+        }
 
-    // Sort workouts by date (newest first) before populating the list
-    workoutsData.sort((a, b) => new Date(b.date) - new Date(a.date));
+        workoutListContainer.innerHTML = '';
 
-    // Add each workout to the list
-    workoutsData.forEach(workout => addWorkoutToList(workout));
+        // Sort workouts by date (newest first) before populating the list
+        workoutsData.sort((a, b) => new Date(b.date) - new Date(a.date));
 
-    // Add event listeners to toggle the details view
-    setupToggleListeners();
+        // Add each workout to the list
+        workoutsData.forEach(workout => addWorkoutToList(workout));
+
+        // Add event listeners to toggle the details view
+        setupToggleListeners();
+    } catch (error) {
+        console.error("Error updating workout table:", error);
+        showErrorMessage("Failed to update workout display. Please refresh the page.", "warning");
+    }
 }
 
 // Helper function to create series HTML list
@@ -262,67 +362,111 @@ function migrateV1ToV2Format(oldData) {
 exerciseForm.addEventListener("submit", (e) => {
     e.preventDefault();
 
-    // Get form values
-    const reps = parseInt(repsInput.value);
-    const exercise = exerciseSelect.value;
-    const weight = weightInput.value ? parseFloat(weightInput.value) : null;
-    const newEntryTime = new Date();
-    const dateString = newEntryTime.toISOString().split('T')[0]; // YYYY-MM-DD
+    try {
+        // Get form values
+        const reps = parseInt(repsInput.value);
+        const exercise = exerciseSelect.value;
+        const weight = weightInput.value ? parseFloat(weightInput.value) : null;
 
-    // Check if a workout for today already exists
-    const existingWorkout = workoutsData.find(workout =>
-        workout.dateString === dateString &&
-        workout.exercise === exercise
-    );
+        // Validate inputs
+        if (isNaN(reps) || reps <= 0) {
+            showErrorMessage("Please enter a valid number of reps (greater than 0).");
+            return;
+        }
 
-    if (existingWorkout) {
-        // If a workout exists for today with the same exercise, add a new series
-        const newSeries = {
-            reps: reps,
-            weight: weight,
-            timestamp: newEntryTime
-        };
+        if (reps > 10000) {
+            showErrorMessage("Number of reps seems unusually high. Please check your input.");
+            return;
+        }
 
-        existingWorkout.series.push(newSeries);
+        if (weight !== null && (isNaN(weight) || weight < 0)) {
+            showErrorMessage("Please enter a valid weight (0 or greater).");
+            return;
+        }
 
-        // Update the totals
-        existingWorkout.totalReps += reps;
+        if (weight !== null && weight > 1000) {
+            showErrorMessage("Weight seems unusually high. Please check your input.");
+            return;
+        }
 
-        // Calculate total time between first and last series
-        const firstSeriesTime = new Date(existingWorkout.series[0].timestamp).getTime();
-        const lastSeriesTime = newEntryTime.getTime();
-        existingWorkout.totalTime = Math.round((lastSeriesTime - firstSeriesTime) / 60000);
-    } else {
-        // Create a new workout for today
-        const newWorkout = {
-            date: newEntryTime,
-            dateString: dateString,
-            exercise: exercise,
-            series: [{
+        if (!exercise || exercise.trim() === "") {
+            showErrorMessage("Please select an exercise type.");
+            return;
+        }
+
+        const newEntryTime = new Date();
+        const dateString = newEntryTime.toISOString().split('T')[0]; // YYYY-MM-DD
+
+        // Check if a workout for today already exists
+        const existingWorkout = workoutsData.find(workout =>
+            workout.dateString === dateString &&
+            workout.exercise === exercise
+        );
+
+        if (existingWorkout) {
+            // If a workout exists for today with the same exercise, add a new series
+            const newSeries = {
                 reps: reps,
                 weight: weight,
                 timestamp: newEntryTime
-            }],
-            totalTime: 0, // First series, so no time elapsed yet
-            totalReps: reps
-        };
+            };
 
-        workoutsData.push(newWorkout);
+            existingWorkout.series.push(newSeries);
+
+            // Update the totals
+            existingWorkout.totalReps += reps;
+
+            // Calculate total time between first and last series
+            const firstSeriesTime = new Date(existingWorkout.series[0].timestamp).getTime();
+            const lastSeriesTime = newEntryTime.getTime();
+            existingWorkout.totalTime = Math.round((lastSeriesTime - firstSeriesTime) / 60000);
+        } else {
+            // Create a new workout for today
+            const newWorkout = {
+                date: newEntryTime,
+                dateString: dateString,
+                exercise: exercise,
+                series: [{
+                    reps: reps,
+                    weight: weight,
+                    timestamp: newEntryTime
+                }],
+                totalTime: 0, // First series, so no time elapsed yet
+                totalReps: reps
+            };
+
+            workoutsData.push(newWorkout);
+        }
+
+        // Save to localStorage using the new format
+        try {
+            const dataToSave = {
+                version: CURRENT_DATA_VERSION,
+                data: workoutsData
+            };
+            localStorage.setItem("workoutData", JSON.stringify(dataToSave));
+            showErrorMessage("Workout saved successfully!", "success");
+        } catch (saveError) {
+            console.error("Error saving workout data:", saveError);
+            showErrorMessage("Failed to save workout data. Your data might be lost.");
+            return;
+        }
+
+        // Clear form inputs
+        repsInput.value = '';
+        weightInput.value = '';
+
+        // Clear and repopulate the list
+        const workoutListContainer = document.getElementById('workout-list-container');
+        workoutListContainer.innerHTML = '';
+
+        updateWorkoutTable();
+        createOrUpdateCharts();
+
+    } catch (error) {
+        console.error("Error processing workout submission:", error);
+        showErrorMessage("An error occurred while adding your workout. Please try again.");
     }
-
-    // Save to localStorage using the new format
-    const dataToSave = {
-        version: CURRENT_DATA_VERSION,
-        data: workoutsData
-    };
-    localStorage.setItem("workoutData", JSON.stringify(dataToSave));
-
-    // Clear and repopulate the list
-    const workoutListContainer = document.getElementById('workout-list-container');
-    workoutListContainer.innerHTML = '';
-
-    updateWorkoutTable();
-    createOrUpdateCharts();
 });
 
 function createLongFormattedDate(date) {
@@ -396,11 +540,16 @@ function aggregateDataByMonth(data) {
 }
 
 function createOrUpdateCharts() {
-    // Check if the charts already exist, if they do, update the data
-    if (chartTotalReps && chartRepsPerMinute) {
-        updateCharts();
-    } else {
-        createCharts();
+    try {
+        // Check if the charts already exist, if they do, update the data
+        if (chartTotalReps && chartRepsPerMinute) {
+            updateCharts();
+        } else {
+            createCharts();
+        }
+    } catch (error) {
+        console.error("Error creating or updating charts:", error);
+        showErrorMessage("Failed to update charts. Data is still saved.", "warning");
     }
 }
 
@@ -508,106 +657,126 @@ function prepareMonthlyChartData() {
 }
 
 function createCharts() {
-    // Get unique exercise types
-    const exerciseTypes = [...new Set(workoutsData.map(workout => workout.exercise))];
-    const uniqueDates = getUniqueDates();
+    try {
+        // Get unique exercise types
+        const exerciseTypes = [...new Set(workoutsData.map(workout => workout.exercise))];
+        const uniqueDates = getUniqueDates();
 
-    const options = {
-        scales: {
-            y: {
-                beginAtZero: true
-            }
-        },
-        responsive: true,
-        maintainAspectRatio: false
-    };
-
-    // Create the total reps chart using the helper function
-    const canvasChartTotal = document.getElementById("reps-chart");
-    const totalRepsDatasets = createChartDatasets(exerciseTypes, uniqueDates, false);
-
-    chartTotalReps = new Chart(canvasChartTotal, {
-        type: "bar",
-        data: {
-            labels: uniqueDates,
-            datasets: totalRepsDatasets
-        },
-        options: {
-            ...options,
-            plugins: {
-                title: {
-                    display: true,
-                    text: 'Total Reps by Exercise'
-                }
-            }
-        }
-    });
-
-    // Create the reps per minute chart using the helper function
-    const canvasChartRepsPerMinute = document.getElementById("reps-per-minute-chart");
-    const repsPerMinuteDatasets = createChartDatasets(exerciseTypes, uniqueDates, true);
-
-    chartRepsPerMinute = new Chart(canvasChartRepsPerMinute, {
-        type: "line",
-        data: {
-            labels: uniqueDates,
-            datasets: repsPerMinuteDatasets
-        },
-        options: {
-            ...options,
-            plugins: {
-                title: {
-                    display: true,
-                    text: 'Reps per Minute by Exercise'
-                }
-            }
-        }
-    });
-
-    // Create the monthly chart using the helper function
-    const monthlyChartData = prepareMonthlyChartData();
-    const canvasChartRepsPerMonth = document.getElementById("reps-per-month-chart");
-
-    chartRepsPerMonth = new Chart(canvasChartRepsPerMonth, {
-        type: "bar",
-        data: monthlyChartData,
-        options: {
+        const options = {
             scales: {
-                x: {
-                    ticks: {
-                        autoSkip: false,
-                        maxRotation: 0,
-                        minRotation: 0,
-                        callback: function (val, index) {
-                            const label = this.getLabelForValue(val);
-                            // Check if label is defined before attempting to split it
-                            if (!label) return '';
-                            const [year, month] = label.split('-');
-                            if (index === 0 || (monthlyChartData.labels[index - 1] &&
-                                monthlyChartData.labels[index - 1].split('-')[0] !== year)) {
-                                return [`${month}`, year];
-                            }
-                            return month;
-                        }
-                    }
-                },
                 y: {
                     beginAtZero: true
                 }
             },
             responsive: true,
-            maintainAspectRatio: false,
-            plugins: {
-                title: {
-                    display: true,
-                    text: 'Monthly Progress'
+            maintainAspectRatio: false
+        };
+
+        // Create the total reps chart using the helper function
+        const canvasChartTotal = document.getElementById("reps-chart");
+        if (!canvasChartTotal) {
+            console.warn("Reps chart canvas not found");
+            return;
+        }
+
+        const totalRepsDatasets = createChartDatasets(exerciseTypes, uniqueDates, false);
+
+        chartTotalReps = new Chart(canvasChartTotal, {
+            type: "bar",
+            data: {
+                labels: uniqueDates,
+                datasets: totalRepsDatasets
+            },
+            options: {
+                ...options,
+                plugins: {
+                    title: {
+                        display: true,
+                        text: 'Total Reps by Exercise'
+                    }
                 }
             }
-        }
-    });
+        });
 
-    // Create the activity chart
-    prepareActivityChartData();
+        // Create the reps per minute chart using the helper function
+        const canvasChartRepsPerMinute = document.getElementById("reps-per-minute-chart");
+        if (!canvasChartRepsPerMinute) {
+            console.warn("Reps per minute chart canvas not found");
+            return;
+        }
+
+        const repsPerMinuteDatasets = createChartDatasets(exerciseTypes, uniqueDates, true);
+
+        chartRepsPerMinute = new Chart(canvasChartRepsPerMinute, {
+            type: "line",
+            data: {
+                labels: uniqueDates,
+                datasets: repsPerMinuteDatasets
+            },
+            options: {
+                ...options,
+                plugins: {
+                    title: {
+                        display: true,
+                        text: 'Reps per Minute by Exercise'
+                    }
+                }
+            }
+        });
+
+        // Create the monthly chart using the helper function
+        const monthlyChartData = prepareMonthlyChartData();
+        const canvasChartRepsPerMonth = document.getElementById("reps-per-month-chart");
+
+        if (!canvasChartRepsPerMonth) {
+            console.warn("Monthly chart canvas not found");
+            return;
+        }
+
+        chartRepsPerMonth = new Chart(canvasChartRepsPerMonth, {
+            type: "bar",
+            data: monthlyChartData,
+            options: {
+                scales: {
+                    x: {
+                        ticks: {
+                            autoSkip: false,
+                            maxRotation: 0,
+                            minRotation: 0,
+                            callback: function (val, index) {
+                                const label = this.getLabelForValue(val);
+                                // Check if label is defined before attempting to split it
+                                if (!label) return '';
+                                const [year, month] = label.split('-');
+                                if (index === 0 || (monthlyChartData.labels[index - 1] &&
+                                    monthlyChartData.labels[index - 1].split('-')[0] !== year)) {
+                                    return [`${month}`, year];
+                                }
+                                return month;
+                            }
+                        }
+                    },
+                    y: {
+                        beginAtZero: true
+                    }
+                },
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    title: {
+                        display: true,
+                        text: 'Monthly Progress'
+                    }
+                }
+            }
+        });
+
+        // Create the activity chart
+        prepareActivityChartData();
+    } catch (error) {
+        console.error("Error creating charts:", error);
+        showErrorMessage("Failed to create charts. Please refresh the page.", "error");
+    }
 }
 
 function getPushUpsPerDate() {
@@ -694,51 +863,87 @@ function prepareActivityChartData() {
 }
 
 document.getElementById('download-csv').addEventListener('click', function () {
-    const storedData = JSON.parse(localStorage.getItem('workoutData'));
+    try {
+        const storedData = JSON.parse(localStorage.getItem('workoutData'));
 
-    // Extract data array from the new format
-    const workouts = Array.isArray(storedData) ? storedData : (storedData.data || []);
+        // Extract data array from the new format
+        const workouts = Array.isArray(storedData) ? storedData : (storedData.data || []);
 
-    // Convert to CSV format - now including series information
-    let csvRows = [
-        ['Workout Date', 'Exercise', 'Series Number', 'Reps', 'Weight', 'Series Time', 'Total Workout Reps', 'Total Workout Time (min)']
-    ];
+        if (workouts.length === 0) {
+            showErrorMessage("No workout data to export.", "info");
+            return;
+        }
 
-    workouts.forEach(workout => {
-        const workoutDate = new Date(workout.date);
-        const totalReps = workout.totalReps ||
-            workout.series.reduce((sum, series) => sum + series.reps, 0);
+        // Convert to CSV format - now including series information
+        let csvRows = [
+            ['Workout Date', 'Exercise', 'Series Number', 'Reps', 'Weight', 'Series Time', 'Total Workout Reps', 'Total Workout Time (min)']
+        ];
 
-        // Add each series as a separate row
-        workout.series.forEach((series, index) => {
-            const seriesTime = new Date(series.timestamp);
-            csvRows.push([
-                workoutDate.toISOString(),
-                workout.exercise,
-                index + 1,
-                series.reps,
-                series.weight || 'BW', // BW for bodyweight (null weight)
-                seriesTime.toISOString(),
-                totalReps,
-                workout.totalTime || 0
-            ]);
+        workouts.forEach(workout => {
+            try {
+                const workoutDate = new Date(workout.date);
+                if (isNaN(workoutDate.getTime())) {
+                    console.warn("Invalid workout date:", workout.date);
+                    return;
+                }
+
+                const totalReps = workout.totalReps ||
+                    workout.series.reduce((sum, series) => sum + series.reps, 0);
+
+                // Add each series as a separate row
+                workout.series.forEach((series, index) => {
+                    try {
+                        const seriesTime = new Date(series.timestamp);
+                        if (isNaN(seriesTime.getTime())) {
+                            console.warn("Invalid series timestamp:", series.timestamp);
+                            return;
+                        }
+
+                        csvRows.push([
+                            workoutDate.toISOString(),
+                            workout.exercise,
+                            index + 1,
+                            series.reps,
+                            series.weight || 'BW', // BW for bodyweight (null weight)
+                            seriesTime.toISOString(),
+                            totalReps,
+                            workout.totalTime || 0
+                        ]);
+                    } catch (seriesError) {
+                        console.error("Error processing series:", seriesError, series);
+                    }
+                });
+            } catch (workoutError) {
+                console.error("Error processing workout:", workoutError, workout);
+            }
         });
-    });
 
-    var csv = csvRows.map(row => row.join(',')).join('\n');
-    var csvContent = 'data:text/csv;charset=utf-8,' + csv;
-    var encodedUri = encodeURI(csvContent);
+        if (csvRows.length <= 1) {
+            showErrorMessage("No valid workout data found to export.", "warning");
+            return;
+        }
 
-    // Get current date in YYYY-MM-DD format for the filename
-    const now = new Date();
-    const dateStr = now.toISOString().split('T')[0];
+        var csv = csvRows.map(row => row.join(',')).join('\n');
+        var csvContent = 'data:text/csv;charset=utf-8,' + csv;
+        var encodedUri = encodeURI(csvContent);
 
-    var link = document.createElement('a');
-    link.setAttribute('href', encodedUri);
-    link.setAttribute('download', `workout_data_${dateStr}.csv`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+        // Get current date in YYYY-MM-DD format for the filename
+        const now = new Date();
+        const dateStr = now.toISOString().split('T')[0];
+
+        var link = document.createElement('a');
+        link.setAttribute('href', encodedUri);
+        link.setAttribute('download', `workout_data_${dateStr}.csv`);
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+
+        showErrorMessage("CSV file downloaded successfully!", "success");
+
+    } catch (error) {
+        console.error("Error exporting CSV:", error);
+        showErrorMessage("Failed to export CSV file. Please try again.");
+    }
 });
 
 function parseCSVData(csvData) {
@@ -846,36 +1051,86 @@ function parseCSVData(csvData) {
 }
 
 function importCSV(replace = false) {
-    const fileInput = replace ? 'file-input-replace' : 'file-input';
-    const file = document.getElementById(fileInput).files[0];
-    const reader = new FileReader();
+    try {
+        const fileInput = replace ? 'file-input-replace' : 'file-input';
+        const file = document.getElementById(fileInput).files[0];
 
-    reader.onload = function (event) {
-        const csvData = event.target.result;
-        const parsedData = parseCSVData(csvData);
-
-        if (replace) {
-            workoutsData = parsedData;
-        } else {
-            workoutsData = workoutsData.concat(parsedData);
+        if (!file) {
+            showErrorMessage("Please select a file to import.");
+            return;
         }
 
-        // Save to localStorage using the new format
-        const dataToSave = {
-            version: CURRENT_DATA_VERSION,
-            data: workoutsData
+        if (!file.name.toLowerCase().endsWith('.csv')) {
+            showErrorMessage("Please select a valid CSV file.");
+            return;
+        }
+
+        if (file.size > 10 * 1024 * 1024) { // 10MB limit
+            showErrorMessage("File is too large. Maximum size is 10MB.");
+            return;
+        }
+
+        const reader = new FileReader();
+
+        reader.onload = function (event) {
+            try {
+                const csvData = event.target.result;
+
+                if (!csvData || csvData.trim() === '') {
+                    showErrorMessage("The selected file is empty.");
+                    return;
+                }
+
+                const parsedData = parseCSVData(csvData);
+
+                if (!parsedData || parsedData.length === 0) {
+                    showErrorMessage("No valid workout data found in the CSV file.");
+                    return;
+                }
+
+                if (replace) {
+                    workoutsData = parsedData;
+                    showErrorMessage(`Replaced all data with ${parsedData.length} workouts from CSV.`, "success");
+                } else {
+                    workoutsData = workoutsData.concat(parsedData);
+                    showErrorMessage(`Imported ${parsedData.length} workouts from CSV.`, "success");
+                }
+
+                // Save to localStorage using the new format
+                try {
+                    const dataToSave = {
+                        version: CURRENT_DATA_VERSION,
+                        data: workoutsData
+                    };
+                    localStorage.setItem("workoutData", JSON.stringify(dataToSave));
+                } catch (saveError) {
+                    console.error("Error saving imported data:", saveError);
+                    showErrorMessage("Data imported but failed to save. Changes may be lost.");
+                    return;
+                }
+
+                // Clear and update the workout list
+                const workoutListContainer = document.getElementById('workout-list-container');
+                workoutListContainer.innerHTML = '';
+
+                updateWorkoutTable();
+                createOrUpdateCharts();
+            } catch (parseError) {
+                console.error("Error parsing CSV data:", parseError);
+                showErrorMessage("Failed to parse CSV file. Please check the file format.");
+            }
         };
-        localStorage.setItem("workoutData", JSON.stringify(dataToSave));
 
-        // Clear and update the workout list
-        const workoutListContainer = document.getElementById('workout-list-container');
-        workoutListContainer.innerHTML = '';
+        reader.onerror = function () {
+            console.error("Error reading file:", reader.error);
+            showErrorMessage("Failed to read the selected file.");
+        };
 
-        updateWorkoutTable();
-        createOrUpdateCharts();
-    };
-
-    reader.readAsText(file);
+        reader.readAsText(file);
+    } catch (error) {
+        console.error("Error importing CSV:", error);
+        showErrorMessage("An error occurred while importing the CSV file.");
+    }
 }
 
 document.getElementById('import-csv').addEventListener('click', function () {
