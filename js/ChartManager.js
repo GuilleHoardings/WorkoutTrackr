@@ -357,31 +357,37 @@ class ChartManager {
             labels: allMonths,
             datasets: monthlyDatasets
         };
-    }
-
-    /**
+    }    /**
      * Prepare activity chart data
      */
     prepareActivityChartData() {
         const workouts = this.dataManager.getAllWorkouts();
 
-        // Group workout data by date across all exercise types
-        const dateTotals = {};
+        // Group workout data by date and exercise type
+        const dateExerciseData = {};
         workouts.forEach(workout => {
             const dateString = workout.dateString;
-            if (!dateTotals[dateString]) {
-                dateTotals[dateString] = {
+            if (!dateExerciseData[dateString]) {
+                dateExerciseData[dateString] = {
                     date: new Date(workout.date),
+                    exercises: {},
                     totalReps: 0
                 };
             }
-            dateTotals[dateString].totalReps += workout.totalReps;
+
+            if (!dateExerciseData[dateString].exercises[workout.exercise]) {
+                dateExerciseData[dateString].exercises[workout.exercise] = 0;
+            }
+
+            dateExerciseData[dateString].exercises[workout.exercise] += workout.totalReps;
+            dateExerciseData[dateString].totalReps += workout.totalReps;
         });
 
         // Convert to activity data format
-        const activityData = Object.values(dateTotals).map(data => ({
+        const activityData = Object.values(dateExerciseData).map(data => ({
             date: data.date,
-            value: data.totalReps
+            value: data.totalReps,
+            exercises: data.exercises
         }));
 
         // Sort the activity data chronologically (oldest to newest)

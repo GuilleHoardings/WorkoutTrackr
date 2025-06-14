@@ -54,19 +54,65 @@ function getGreenShadeDiscrete(pushUps) {
     return colors[shade] || color;
 }
 
-function getGreenShade(pushUps) {
-    var maxPushUps = 160;
-    var minLightness = 10;
-    var maxLightness = 70;
-
-    if (pushUps > 0) {
-        var lightness = maxLightness - (pushUps / maxPushUps) * (maxLightness - minLightness);
-        var color = 'hsl(130, 100%, ' + lightness + '%)';
-    } else {
-        var color = '#ebedf0'; // Default color for 0 push-ups
+/**
+ * Gets the color for a cell based on the exercise types and their values.
+ * If multiple exercises exist for a day, it will choose the dominant exercise.
+ * 
+ * @param {Object} cellData - The cell data containing exercise information
+ * @returns {string} The color for the cell
+ */
+function getExerciseColor(cellData) {
+    // If no exercises or total value is 0, return default color
+    if (!cellData.exercises || cellData.value === 0) {
+        return '#ebedf0';
     }
 
-    return color;
+    // Get the exercise with the highest reps for this day
+    const exercises = cellData.exercises;
+    const dominantExercise = Object.keys(exercises).reduce((a, b) =>
+        exercises[a] > exercises[b] ? a : b
+    );
+
+    // Exercise color mapping
+    const exerciseColors = {
+        'Push-ups': { hue: 130, name: 'Push-ups' },      // Green
+        'Pull-ups': { hue: 210, name: 'Pull-ups' },      // Blue
+        'Squats': { hue: 270, name: 'Squats' },          // Purple
+        'Sit-ups': { hue: 30, name: 'Sit-ups' },         // Orange
+        'Lunges': { hue: 300, name: 'Lunges' },          // Magenta
+        'Dips': { hue: 180, name: 'Dips' },              // Cyan
+        'Planks': { hue: 60, name: 'Planks' }            // Yellow
+    };
+
+    // Get the color for the dominant exercise
+    const exerciseColor = exerciseColors[dominantExercise] || { hue: 130, name: 'Unknown' };
+
+    // Calculate intensity based on reps (similar to the original green shade logic)
+    const maxReps = 160;
+    const minLightness = 20;
+    const maxLightness = 70;
+
+    const repsForExercise = exercises[dominantExercise];
+    const lightness = maxLightness - (repsForExercise / maxReps) * (maxLightness - minLightness);
+
+    return `hsl(${exerciseColor.hue}, 70%, ${Math.max(minLightness, Math.min(maxLightness, lightness))}%)`;
+}
+
+/**
+ * Gets the dominant exercise for a cell (used for tooltip display)
+ * 
+ * @param {Object} cellData - The cell data containing exercise information
+ * @returns {string} The name of the dominant exercise
+ */
+function getDominantExercise(cellData) {
+    if (!cellData.exercises || Object.keys(cellData.exercises).length === 0) {
+        return 'No exercises';
+    }
+
+    const exercises = cellData.exercises;
+    return Object.keys(exercises).reduce((a, b) =>
+        exercises[a] > exercises[b] ? a : b
+    );
 }
 
 /**
@@ -121,9 +167,7 @@ function createActivityChart(data, canvas) {
 
     canvas.addEventListener('mouseout', function () {
         tooltip.style.display = 'none';
-    });
-
-    function initTooltipEventHandlers() {
+    }); function initTooltipEventHandlers() {
         canvas.addEventListener('mousemove', function (e) {
             const rect = canvas.getBoundingClientRect();
             const mouseX = e.clientX - rect.left;
@@ -137,7 +181,20 @@ function createActivityChart(data, canvas) {
                     tooltip.style.display = 'block';
                     tooltip.style.left = (e.pageX + 10) + 'px';
                     tooltip.style.top = (e.pageY + 10) + 'px';
-                    tooltip.innerHTML = `Date: ${cell.date.toLocaleDateString()}<br>Value: ${cell.cellValue}`;
+
+                    // Create detailed tooltip content
+                    let tooltipContent = `Date: ${cell.date.toLocaleDateString()}<br>`;
+                    tooltipContent += `Total Reps: ${cell.cellValue}<br>`;
+
+                    if (cell.exercises && Object.keys(cell.exercises).length > 0) {
+                        tooltipContent += `Dominant: ${cell.dominantExercise}<br>`;
+                        tooltipContent += `Exercises:<br>`;
+                        Object.entries(cell.exercises).forEach(([exercise, reps]) => {
+                            tooltipContent += `&nbsp;&nbsp;${exercise}: ${reps}<br>`;
+                        });
+                    }
+
+                    tooltip.innerHTML = tooltipContent;
                     found = true;
                 }
             });
@@ -146,9 +203,7 @@ function createActivityChart(data, canvas) {
                 tooltip.style.display = 'none';
             }
         });
-    }
-
-    function drawActivityCell(cellData) {
+    } function drawActivityCell(cellData) {
         const date = new Date(cellData.date);
         const relativeYear = maxYear - date.getFullYear();
         let dayOfWeekIndex = computeDayOfWeekIndex(date);
@@ -163,10 +218,12 @@ function createActivityChart(data, canvas) {
             width: cellSize,
             height: cellSize,
             date: date,
-            cellValue: cellData.value
+            cellValue: cellData.value,
+            exercises: cellData.exercises || {},
+            dominantExercise: getDominantExercise(cellData)
         });
 
-        var color = getGreenShade(cellData.value);
+        var color = getExerciseColor(cellData);
         ctx.fillStyle = color;
         ctx.fillRect(x, y, cellSize, cellSize);
     }
