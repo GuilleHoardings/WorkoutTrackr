@@ -349,7 +349,8 @@ function createActivityChart(data, canvas) {
         ctx.fillStyle = '#666';
         ctx.font = '12px system-ui, sans-serif';
         ctx.textAlign = 'left';
-        ctx.fillText(absYear, padding + 5, yYearStart - monthTextSize - 5);
+        // Align year label horizontally with the leftmost squares and month labels
+        ctx.fillText(absYear, padding, yYearStart - monthTextSize - 5);
     } function drawGrid(yYearStart) {
         // Month names display
         const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
@@ -366,9 +367,10 @@ function createActivityChart(data, canvas) {
             const y = dayIndex * cellSize + padding * (dayIndex + 1) + yYearStart + cellSize / 2 + 3;
             ctx.fillText(dayLabels[i], padding - 5, y);
         } for (var i = 0; i < 53; i++) {
-            // Draw the month names
-            if (i % 4 === 0 && i < 48) { // Every 4 weeks, show month
-                const monthIndex = Math.min(Math.floor(i / 4.33), 11);
+            // Draw the month names - better distribution across the year
+            if (i % 4 === 0 && i < 52) { // Every 4 weeks, show month
+                // Calculate month index based on week position in year (52 weeks total)
+                const monthIndex = Math.min(Math.floor(i * 12 / 52), 11);
                 ctx.fillStyle = '#666';
                 ctx.font = '11px system-ui, sans-serif';
                 ctx.textAlign = 'left';
