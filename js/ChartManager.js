@@ -838,7 +838,7 @@ class ChartManager {
         // Convert to arrays and sort
         const sortedWeeks = Object.values(weeklyData)
             .sort((a, b) => a.week.localeCompare(b.week))
-            .slice(-12); // Last 12 weeks
+            .slice(-53); // Last 53 weeks
 
         const labels = sortedWeeks.map(w => w.week);
         const totalRepsData = sortedWeeks.map(w => w.totalReps);
