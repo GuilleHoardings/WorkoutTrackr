@@ -127,9 +127,6 @@ class WorkoutTrackerApp {
             await this.dataManager.saveWorkoutData();
             this.notificationManager.showSuccess("Workout saved successfully!");
 
-            // Clear form
-            this.uiManager.clearFormInputs();
-
             // Update UI
             this.refreshUI();
 
