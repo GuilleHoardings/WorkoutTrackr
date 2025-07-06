@@ -170,6 +170,51 @@ class WorkoutDataManager {
     }
 
     /**
+     * Delete a series from a workout and recalculate totals
+     * @param {string} workoutId - Workout identifier (timestamp as string)
+     * @param {number} seriesIndex - Index of the series to delete
+     * @returns {boolean} True if series was deleted, false if workout was deleted
+     */
+    deleteSeries(workoutId, seriesIndex) {
+        const workoutIndex = this.workoutsData.findIndex(workout =>
+            new Date(workout.date).getTime().toString() === workoutId
+        );
+
+        if (workoutIndex === -1) {
+            throw new Error("Workout not found");
+        }
+
+        const workout = this.workoutsData[workoutIndex];
+
+        if (seriesIndex < 0 || seriesIndex >= workout.series.length) {
+            throw new Error("Series index out of bounds");
+        }
+
+        // If this is the only series, delete the entire workout
+        if (workout.series.length === 1) {
+            this.workoutsData.splice(workoutIndex, 1);
+            return false; // Indicates workout was deleted
+        }
+
+        // Remove the series
+        workout.series.splice(seriesIndex, 1);
+
+        // Recalculate totals
+        workout.totalReps = workout.series.reduce((sum, series) => sum + series.reps, 0);
+
+        // Recalculate total time between first and last series
+        if (workout.series.length > 1) {
+            const firstSeriesTime = new Date(workout.series[0].timestamp).getTime();
+            const lastSeriesTime = new Date(workout.series[workout.series.length - 1].timestamp).getTime();
+            workout.totalTime = Math.round((lastSeriesTime - firstSeriesTime) / 60000);
+        } else {
+            workout.totalTime = 0; // Only one series remaining
+        }
+
+        return true; // Indicates series was deleted but workout remains
+    }
+
+    /**
      * Get all workouts data
      * @returns {Array} Array of all workouts
      */

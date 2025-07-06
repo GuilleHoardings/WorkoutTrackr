@@ -7,7 +7,7 @@ class WorkoutTrackerApp {
         this.notificationManager = new NotificationManager();
         this.dataManager = new WorkoutDataManager();
         this.validationManager = new ValidationManager(this.notificationManager);
-        this.uiManager = new UIManager(this.dataManager, this.notificationManager);
+        this.uiManager = new UIManager(this.dataManager, this.notificationManager, this.refreshUI.bind(this));
         this.chartManager = new ChartManager(this.dataManager, this.notificationManager);
         this.csvManager = new CSVManager(this.dataManager, this.notificationManager, this.validationManager);
 

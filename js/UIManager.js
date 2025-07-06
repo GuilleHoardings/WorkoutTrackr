@@ -2,9 +2,10 @@
  * UIManager - Handles DOM manipulation and user interface updates
  */
 class UIManager {
-    constructor(dataManager, notificationManager) {
+    constructor(dataManager, notificationManager, refreshCallback = null) {
         this.dataManager = dataManager;
         this.notificationManager = notificationManager;
+        this.refreshCallback = refreshCallback;
         this.domElements = this.initializeDOMElements();
     }
 
@@ -138,7 +139,8 @@ class UIManager {
         seriesContainer.className = 'series-container';
 
         // Create series list using the helper function
-        seriesContainer.innerHTML = this.createSeriesListHtml(workout.series);
+        const workoutId = new Date(workout.date).getTime().toString();
+        seriesContainer.innerHTML = this.createSeriesListHtml(workout.series, workoutId);
 
         // Add the workout item and series container to the list
         this.domElements.workoutListContainer.appendChild(workoutItem);
@@ -148,14 +150,19 @@ class UIManager {
     /**
      * Create HTML for series list
      * @param {Array} series - Array of series objects
+     * @param {string} workoutId - Workout identifier for delete functionality
      * @returns {string} HTML string for the series list
      */
-    createSeriesListHtml(series) {
+    createSeriesListHtml(series, workoutId) {
         let seriesHtml = '<ul class="series-list">';
         series.forEach((series, index) => {
             const seriesTime = new Date(series.timestamp);
             const weightDisplay = series.weight ? `${series.weight} kg` : 'Bodyweight';
-            seriesHtml += `<li>Series ${index + 1}: ${series.reps} reps - ${weightDisplay} - ${seriesTime.toLocaleTimeString()}</li>`;
+            seriesHtml += `
+                <li class="series-item">
+                    <span class="series-info">Series ${index + 1}: ${series.reps} reps - ${weightDisplay} - ${seriesTime.toLocaleTimeString()}</span>
+                    <button class="delete-series-btn" data-workout-id="${workoutId}" data-series-index="${index}" title="Delete this series">×</button>
+                </li>`;
         });
         seriesHtml += '</ul>';
         return seriesHtml;
@@ -172,6 +179,9 @@ class UIManager {
             item.removeEventListener('click', this.handleWorkoutItemClick);
             item.addEventListener('click', this.handleWorkoutItemClick.bind(this));
         });
+
+        // Also setup delete listeners
+        this.setupDeleteListeners();
     }
 
     /**
@@ -246,6 +256,61 @@ class UIManager {
      */
     refreshUI() {
         this.updateWorkoutTable();
+    }
+
+    /**
+     * Setup event listeners for deleting series
+     */
+    setupDeleteListeners() {
+        const deleteButtons = document.querySelectorAll('.delete-series-btn');
+
+        deleteButtons.forEach(button => {
+            // Remove existing listeners to prevent duplicates
+            button.removeEventListener('click', this.handleDeleteSeries);
+            button.addEventListener('click', this.handleDeleteSeries.bind(this));
+        });
+    }
+
+    /**
+     * Handle series deletion
+     * @param {Event} event - Click event from delete button
+     */
+    async handleDeleteSeries(event) {
+        event.stopPropagation(); // Prevent the workout item from toggling
+
+        const workoutId = event.target.dataset.workoutId;
+        const seriesIndex = parseInt(event.target.dataset.seriesIndex);
+
+        try {
+            // Show confirmation dialog
+            const confirmed = confirm('Are you sure you want to delete this series?');
+            if (!confirmed) {
+                return;
+            }
+
+            // Delete the series using the data manager
+            const workoutRemains = this.dataManager.deleteSeries(workoutId, seriesIndex);
+
+            // Save the updated data
+            await this.dataManager.saveWorkoutData();
+
+            if (workoutRemains) {
+                this.notificationManager.showSuccess('Series deleted successfully');
+            } else {
+                this.notificationManager.showSuccess('Workout deleted (was the last series)');
+            }
+
+            // Refresh the UI to show updated data
+            if (this.refreshCallback) {
+                this.refreshCallback();
+            } else {
+                this.refreshUI();
+            }
+
+        } catch (error) {
+            console.error('Error deleting series:', error);
+            this.notificationManager.showError('Failed to delete series: ' + error.message);
+        }
     }
 }
 
