@@ -2,10 +2,11 @@
  * UIManager - Handles DOM manipulation and user interface updates
  */
 class UIManager {
-    constructor(dataManager, notificationManager, refreshCallback = null) {
+    constructor(dataManager, notificationManager, refreshCallback = null, exerciseTypeManager = null) {
         this.dataManager = dataManager;
         this.notificationManager = notificationManager;
         this.refreshCallback = refreshCallback;
+        this.exerciseTypeManager = exerciseTypeManager;
         this.domElements = this.initializeDOMElements();
     }
 
@@ -20,7 +21,12 @@ class UIManager {
             repsInput: document.getElementById("reps"),
             weightInput: document.getElementById("weight"),
             exerciseSelect: document.getElementById("exercise-select"),
-            workoutListContainer: document.getElementById('workout-list-container')
+            workoutListContainer: document.getElementById('workout-list-container'),
+            // Exercise management elements
+            newExerciseInput: document.getElementById("new-exercise-input"),
+            addExerciseBtn: document.getElementById("add-exercise-btn"),
+            exerciseTypesList: document.getElementById("exercise-types-list"),
+            resetExercisesBtn: document.getElementById("reset-exercises-btn")
         };
     }
 
@@ -66,7 +72,15 @@ class UIManager {
             this.domElements.workoutListContainer.innerHTML = '';
 
             // Get sorted workouts from data manager
-            const sortedWorkouts = this.dataManager.getWorkoutsSortedByDate();
+            let sortedWorkouts = this.dataManager.getWorkoutsSortedByDate();
+
+            // Filter out workouts with deleted exercise types if configured to do so
+            if (this.exerciseTypeManager && this.exerciseTypeManager.hideDeletedExercisesFromTable) {
+                const allowedExerciseTypes = new Set(this.exerciseTypeManager.getExerciseTypes());
+                sortedWorkouts = sortedWorkouts.filter(workout => 
+                    allowedExerciseTypes.has(workout.exercise)
+                );
+            }
 
             // Add each workout to the list
             sortedWorkouts.forEach(workout => this.addWorkoutToList(workout));
@@ -89,9 +103,16 @@ class UIManager {
             return;
         }
 
+        // Check if this exercise type is deleted
+        const isDeletedExerciseType = this.exerciseTypeManager && 
+            !this.exerciseTypeManager.getExerciseTypes().includes(workout.exercise);
+
         // Create the main workout item
         const workoutItem = document.createElement('div');
         workoutItem.className = 'workout-item';
+        if (isDeletedExerciseType) {
+            workoutItem.classList.add('deleted-exercise-type');
+        }
         workoutItem.dataset.id = new Date(workout.date).getTime(); // Use timestamp as ID
 
         // Format date
@@ -103,6 +124,10 @@ class UIManager {
         const exerciseDetail = document.createElement('div');
         exerciseDetail.className = 'workout-detail exercise';
         exerciseDetail.textContent = workout.exercise;
+        if (isDeletedExerciseType) {
+            exerciseDetail.title = 'This exercise type has been deleted';
+            exerciseDetail.innerHTML += ' <span class="deleted-indicator">(deleted)</span>';
+        }
 
         // Total reps
         const repsDetail = document.createElement('div');
@@ -245,10 +270,16 @@ class UIManager {
             return;
         }
 
+        // Initialize exercise management UI
+        this.initializeExerciseManagement();
+
         const workouts = this.dataManager.getAllWorkouts();
         if (workouts.length > 0) {
             this.updateWorkoutTable();
         }
+        
+        // Update activity legend
+        this.updateActivityLegend();
     }
 
     /**
@@ -256,6 +287,9 @@ class UIManager {
      */
     refreshUI() {
         this.updateWorkoutTable();
+        this.updateExerciseDropdown();
+        this.updateExerciseTypesList();
+        this.updateActivityLegend();
     }
 
     /**
@@ -311,6 +345,227 @@ class UIManager {
             console.error('Error deleting series:', error);
             this.notificationManager.showError('Failed to delete series: ' + error.message);
         }
+    }
+
+    /**
+     * Initialize exercise management UI
+     */
+    initializeExerciseManagement() {
+        console.log('Initializing exercise management UI...');
+        
+        if (!this.exerciseTypeManager) {
+            console.warn('Exercise type manager not available');
+            return;
+        }
+
+        // Update exercise dropdown
+        this.updateExerciseDropdown();
+        
+        // Update exercise types list
+        this.updateExerciseTypesList();
+        
+        // Setup event listeners
+        this.setupExerciseManagementListeners();
+        
+        console.log('Exercise management UI initialized');
+    }
+
+    /**
+     * Update the exercise dropdown with current exercise types
+     */
+    updateExerciseDropdown() {
+        if (!this.exerciseTypeManager || !this.domElements.exerciseSelect) {
+            return;
+        }
+
+        const exerciseTypes = this.exerciseTypeManager.getExerciseTypes();
+        const currentValue = this.domElements.exerciseSelect.value;
+        
+        // Clear existing options
+        this.domElements.exerciseSelect.innerHTML = '';
+        
+        // Add exercise types as options
+        exerciseTypes.forEach(exerciseType => {
+            const option = document.createElement('option');
+            option.value = exerciseType;
+            option.textContent = exerciseType;
+            this.domElements.exerciseSelect.appendChild(option);
+        });
+        
+        // Restore previous selection if it still exists
+        if (exerciseTypes.includes(currentValue)) {
+            this.domElements.exerciseSelect.value = currentValue;
+        }
+    }
+
+    /**
+     * Update the exercise types list display
+     */
+    updateExerciseTypesList() {
+        if (!this.exerciseTypeManager || !this.domElements.exerciseTypesList) {
+            return;
+        }
+
+        const exerciseTypes = this.exerciseTypeManager.getExerciseTypes();
+        
+        // Clear existing list
+        this.domElements.exerciseTypesList.innerHTML = '';
+        
+        // Add each exercise type with delete button
+        exerciseTypes.forEach(exerciseType => {
+            const item = document.createElement('div');
+            item.className = 'exercise-type-item';
+            
+            const nameSpan = document.createElement('span');
+            nameSpan.className = 'exercise-type-name';
+            nameSpan.textContent = exerciseType;
+            
+            const deleteBtn = document.createElement('button');
+            deleteBtn.className = 'delete-exercise-btn';
+            deleteBtn.title = `Delete ${exerciseType}`;
+            deleteBtn.addEventListener('click', () => this.handleDeleteExerciseType(exerciseType));
+            
+            item.appendChild(nameSpan);
+            item.appendChild(deleteBtn);
+            this.domElements.exerciseTypesList.appendChild(item);
+        });
+    }
+
+    /**
+     * Setup event listeners for exercise management
+     */
+    setupExerciseManagementListeners() {
+        // Add exercise button
+        if (this.domElements.addExerciseBtn) {
+            this.domElements.addExerciseBtn.addEventListener('click', () => this.handleAddExerciseType());
+        }
+        
+        // Add exercise input (Enter key)
+        if (this.domElements.newExerciseInput) {
+            this.domElements.newExerciseInput.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') {
+                    this.handleAddExerciseType();
+                }
+            });
+        }
+        
+        // Reset button
+        if (this.domElements.resetExercisesBtn) {
+            this.domElements.resetExercisesBtn.addEventListener('click', () => this.handleResetExerciseTypes());
+        }
+    }
+
+    /**
+     * Handle adding a new exercise type
+     */
+    async handleAddExerciseType() {
+        if (!this.exerciseTypeManager || !this.domElements.newExerciseInput) {
+            return;
+        }
+
+        const exerciseType = this.domElements.newExerciseInput.value.trim();
+        if (!exerciseType) {
+            this.notificationManager.showError('Please enter an exercise type name.');
+            return;
+        }
+
+        const success = await this.exerciseTypeManager.addExerciseType(exerciseType);
+        if (success) {
+            // Clear input
+            this.domElements.newExerciseInput.value = '';
+            
+            // Update UI
+            this.updateExerciseDropdown();
+            this.updateExerciseTypesList();
+            
+            // Update legend colors if needed
+            this.updateActivityLegend();
+        }
+    }
+
+    /**
+     * Handle deleting an exercise type
+     */
+    async handleDeleteExerciseType(exerciseType) {
+        if (!this.exerciseTypeManager) {
+            return;
+        }
+
+        const success = await this.exerciseTypeManager.deleteExerciseType(exerciseType);
+        if (success) {
+            // Update UI
+            this.updateExerciseDropdown();
+            this.updateExerciseTypesList();
+            
+            // Update legend colors
+            this.updateActivityLegend();
+            
+            // Refresh charts if callback exists
+            if (this.refreshCallback) {
+                this.refreshCallback();
+            }
+        }
+    }
+
+    /**
+     * Handle resetting exercise types to defaults
+     */
+    async handleResetExerciseTypes() {
+        if (!this.exerciseTypeManager) {
+            return;
+        }
+
+        const success = await this.exerciseTypeManager.resetToDefaults();
+        if (success) {
+            // Update UI
+            this.updateExerciseDropdown();
+            this.updateExerciseTypesList();
+            
+            // Update legend colors
+            this.updateActivityLegend();
+            
+            // Refresh charts if callback exists
+            if (this.refreshCallback) {
+                this.refreshCallback();
+            }
+        }
+    }
+
+    /**
+     * Update the activity legend with current exercise colors
+     */
+    updateActivityLegend() {
+        if (!this.exerciseTypeManager) {
+            return;
+        }
+
+        const legendItems = document.querySelector('.legend-items');
+        if (!legendItems) {
+            return;
+        }
+
+        const exerciseTypes = this.exerciseTypeManager.getExerciseTypes();
+        
+        // Clear existing legend items
+        legendItems.innerHTML = '';
+        
+        // Add legend item for each exercise type
+        exerciseTypes.forEach(exerciseType => {
+            const colorInfo = this.exerciseTypeManager.getExerciseColor(exerciseType);
+            const legendItem = document.createElement('div');
+            legendItem.className = 'legend-item';
+            
+            const colorDiv = document.createElement('div');
+            colorDiv.className = 'legend-color';
+            colorDiv.style.backgroundColor = `hsl(${colorInfo.hue}, 70%, 45%)`;
+            
+            const span = document.createElement('span');
+            span.textContent = exerciseType;
+            
+            legendItem.appendChild(colorDiv);
+            legendItem.appendChild(span);
+            legendItems.appendChild(legendItem);
+        });
     }
 }
 

@@ -37,8 +37,14 @@ class ChartManager {
                 return;
             }
 
-            // Get unique exercise types and dates
-            const exerciseTypes = this.dataManager.getUniqueExerciseTypes();
+            // Get exercise types from ExerciseTypeManager if available, otherwise fall back to data-based types
+            let exerciseTypes;
+            if (window.workoutApp && window.workoutApp.exerciseTypeManager) {
+                exerciseTypes = window.workoutApp.exerciseTypeManager.getExerciseTypes();
+            } else {
+                exerciseTypes = this.dataManager.getUniqueExerciseTypes();
+            }
+            
             const uniqueDates = this.getUniqueDates();
 
             // Enhanced chart options with better styling
@@ -496,7 +502,14 @@ class ChartManager {
      */
     updateCharts() {
         try {
-            const exerciseTypes = this.dataManager.getUniqueExerciseTypes();
+            // Get exercise types from ExerciseTypeManager if available, otherwise fall back to data-based types
+            let exerciseTypes;
+            if (window.workoutApp && window.workoutApp.exerciseTypeManager) {
+                exerciseTypes = window.workoutApp.exerciseTypeManager.getExerciseTypes();
+            } else {
+                exerciseTypes = this.dataManager.getUniqueExerciseTypes();
+            }
+            
             const uniqueDates = this.getUniqueDates();
 
             // Update total reps chart
@@ -775,9 +788,20 @@ class ChartManager {
     prepareActivityChartData() {
         const workouts = this.dataManager.getAllWorkouts();
 
+        // Get allowed exercise types from ExerciseTypeManager if available
+        let allowedExerciseTypes = null;
+        if (window.workoutApp && window.workoutApp.exerciseTypeManager) {
+            allowedExerciseTypes = new Set(window.workoutApp.exerciseTypeManager.getExerciseTypes());
+        }
+
         // Group workout data by date and exercise type
         const dateExerciseData = {};
         workouts.forEach(workout => {
+            // Skip workouts with deleted exercise types if we have a managed list
+            if (allowedExerciseTypes && !allowedExerciseTypes.has(workout.exercise)) {
+                return;
+            }
+
             const dateString = workout.dateString;
             if (!dateExerciseData[dateString]) {
                 dateExerciseData[dateString] = {

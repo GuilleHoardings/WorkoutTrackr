@@ -376,6 +376,28 @@ input[type="file"] {
     display: block;
 }
 
+/* Deleted exercise type styling */
+.workout-item.deleted-exercise-type {
+    opacity: 0.6;
+    background-color: #fff8dc; /* Light yellow background */
+    border-left: 4px solid #ff9800; /* Orange left border indicator */
+}
+
+.workout-item.deleted-exercise-type:hover {
+    background-color: #fff3cd;
+}
+
+.deleted-indicator {
+    font-size: 0.8em;
+    color: #ff9800;
+    font-style: italic;
+    font-weight: normal;
+}
+
+.workout-item.deleted-exercise-type .workout-detail.exercise {
+    color: #856404; /* Darker text for deleted exercise types */
+}
+
 .series-list {
     padding-left: 0;
     margin: 0;
@@ -613,5 +635,156 @@ input#weight, input#reps {
 
     .legend-items {
         grid-template-columns: 1fr 1fr;
+    }
+}
+
+/* Exercise Management Styles */
+.exercise-management {
+    margin-bottom: 20px;
+    padding: 15px;
+    background-color: #fff;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.exercise-management h3 {
+    margin-top: 0;
+    margin-bottom: 15px;
+    color: #36454f;
+    font-size: 18px;
+    font-weight: 600;
+}
+
+.exercise-management-controls {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+.add-exercise-form {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    flex-wrap: wrap;
+}
+
+.add-exercise-form input[type="text"] {
+    flex: 1;
+    min-width: 200px;
+    padding: 8px 12px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 14px;
+}
+
+.add-exercise-form input[type="text"]:focus {
+    outline: none;
+    border-color: #36454f;
+    box-shadow: 0 0 0 2px rgba(54, 69, 79, 0.1);
+}
+
+.exercise-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.exercise-list-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-weight: 500;
+    color: #36454f;
+}
+
+.reset-btn {
+    background-color: #ff6b6b !important;
+    color: white !important;
+    font-size: 12px !important;
+    padding: 6px 12px !important;
+    margin: 0 !important;
+}
+
+.reset-btn:hover {
+    background-color: #ff5252 !important;
+}
+
+.exercise-types-container {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    max-height: 200px;
+    overflow-y: auto;
+    padding: 10px;
+    border: 1px solid #eee;
+    border-radius: 4px;
+    background-color: #fafafa;
+}
+
+.exercise-type-item {
+    display: flex;
+    align-items: center;
+    background-color: white;
+    border: 1px solid #ddd;
+    border-radius: 20px;
+    padding: 6px 12px;
+    font-size: 14px;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+
+.exercise-type-name {
+    margin-right: 8px;
+    color: #333;
+}
+
+.delete-exercise-btn {
+    background-color: #ff4757 !important;
+    color: white !important;
+    border: none !important;
+    border-radius: 50% !important;
+    width: 20px !important;
+    height: 20px !important;
+    font-size: 12px !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    cursor: pointer;
+    line-height: 1;
+}
+
+.delete-exercise-btn:hover {
+    background-color: #ff3742 !important;
+}
+
+.delete-exercise-btn:before {
+    content: "×";
+    font-weight: bold;
+}
+
+/* Responsive adjustments for exercise management */
+@media (max-width: 768px) {
+    .exercise-management-controls {
+        gap: 10px;
+    }
+    
+    .add-exercise-form {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    
+    .add-exercise-form input[type="text"] {
+        min-width: auto;
+    }
+    
+    .exercise-list-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 8px;
+    }
+    
+    .exercise-types-container {
+        max-height: 150px;
     }
 }

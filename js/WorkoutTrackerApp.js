@@ -6,8 +6,9 @@ class WorkoutTrackerApp {
         // Initialize managers
         this.notificationManager = new NotificationManager();
         this.dataManager = new WorkoutDataManager();
+        this.exerciseTypeManager = new ExerciseTypeManager(this.dataManager, this.notificationManager);
         this.validationManager = new ValidationManager(this.notificationManager);
-        this.uiManager = new UIManager(this.dataManager, this.notificationManager, this.refreshUI.bind(this));
+        this.uiManager = new UIManager(this.dataManager, this.notificationManager, this.refreshUI.bind(this), this.exerciseTypeManager);
         this.chartManager = new ChartManager(this.dataManager, this.notificationManager);
         this.csvManager = new CSVManager(this.dataManager, this.notificationManager, this.validationManager);
 
@@ -27,6 +28,9 @@ class WorkoutTrackerApp {
     async init() {
         try {
             console.log('Initializing Workout Tracker App...');
+
+            // Initialize exercise types first
+            await this.exerciseTypeManager.initializeExerciseTypes();
 
             // Load workout data
             await this.loadData();

@@ -62,19 +62,24 @@ function getGreenShadeDiscrete(pushUps) {
  * @returns {string} The color for the exercise
  */
 function getColorForExercise(exercise, reps) {
-    // Exercise color mapping
-    const exerciseColors = {
-        'Push-ups': { hue: 130, name: 'Push-ups' },      // Green
-        'Pull-ups': { hue: 210, name: 'Pull-ups' },      // Blue
-        'Squats': { hue: 270, name: 'Squats' },          // Purple
-        'Sit-ups': { hue: 30, name: 'Sit-ups' },         // Orange
-        'Lunges': { hue: 300, name: 'Lunges' },          // Magenta
-        'Dips': { hue: 180, name: 'Dips' },              // Cyan
-        'Planks': { hue: 60, name: 'Planks' }            // Yellow
-    };
-
-    // Get the color for the exercise
-    const exerciseColor = exerciseColors[exercise] || { hue: 130, name: 'Unknown' };
+    // Try to get color from exercise type manager if available
+    let exerciseColor = { hue: 130, name: 'Unknown' };
+    
+    if (window.workoutApp && window.workoutApp.exerciseTypeManager) {
+        exerciseColor = window.workoutApp.exerciseTypeManager.getExerciseColor(exercise);
+    } else {
+        // Fallback to hardcoded exercise color mapping
+        const exerciseColors = {
+            'Push-ups': { hue: 130, name: 'Push-ups' },      // Green
+            'Pull-ups': { hue: 210, name: 'Pull-ups' },      // Blue
+            'Squats': { hue: 270, name: 'Squats' },          // Purple
+            'Sit-ups': { hue: 30, name: 'Sit-ups' },         // Orange
+            'Lunges': { hue: 300, name: 'Lunges' },          // Magenta
+            'Dips': { hue: 180, name: 'Dips' },              // Cyan
+            'Planks': { hue: 60, name: 'Planks' }            // Yellow
+        };
+        exerciseColor = exerciseColors[exercise] || { hue: 130, name: 'Unknown' };
+    }
 
     // Calculate intensity based on reps
     const maxReps = 160;
@@ -127,6 +132,26 @@ function getDominantExercise(cellData) {
 }
 
 /**
+ * Clean up existing activity chart elements and event listeners
+ * @param {HTMLCanvasElement} canvas - The canvas element to clean up
+ */
+function cleanupActivityChart(canvas) {
+    // Remove existing tooltips
+    const existingTooltips = document.querySelectorAll('[data-activity-tooltip]');
+    existingTooltips.forEach(tooltip => tooltip.remove());
+    
+    // Clone the canvas to remove all event listeners
+    const newCanvas = canvas.cloneNode(true);
+    canvas.parentNode.replaceChild(newCanvas, canvas);
+    
+    // Update the reference to point to the new canvas
+    const originalCanvas = canvas;
+    canvas = newCanvas;
+    
+    return newCanvas;
+}
+
+/**
  * Generates an activity chart on the provided canvas element based on the given data.
  * The chart displays a grid of cells, where each cell represents a day and is colored
  * based on the corresponding activity value.
@@ -140,7 +165,12 @@ function createActivityChart(data, canvas) {
     if (!data || data.length === 0) {
         console.warn("No data available for activity chart");
         return;
-    }    // Get the range of years by examining all data points
+    }
+    
+    // Clean up existing tooltips and event listeners
+    canvas = cleanupActivityChart(canvas);
+    
+    // Get the range of years by examining all data points
     const years = data.map(d => new Date(d.date).getFullYear());
     const minYear = Math.min(...years);
     const maxYear = Math.max(...years);
@@ -342,6 +372,9 @@ function createActivityChart(data, canvas) {
         tooltip.style.lineHeight = '1.4';
         tooltip.style.zIndex = '1000';
         tooltip.style.pointerEvents = 'none';
+        
+        // Add data attribute for identification and cleanup
+        tooltip.setAttribute('data-activity-tooltip', 'true');
 
         document.body.appendChild(tooltip);
         return tooltip;
