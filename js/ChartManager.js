@@ -664,8 +664,8 @@ class ChartManager {
                 }
             });
 
-            // Fill in data for all dates (with nulls for missing dates)
-            const valueData = uniqueDates.map(date => dateToValue[date] || null);
+            // Fill in data for all dates (with zeros for missing dates to show gaps)
+            const valueData = uniqueDates.map(date => dateToValue[date] || 0);
 
             // Get base color for this exercise
             const baseColor = colorScale[index % colorScale.length];
@@ -954,6 +954,10 @@ class ChartManager {
         const workouts = this.dataManager.getAllWorkouts();
         const monthlyData = {};
 
+        if (workouts.length === 0) {
+            return { labels: [], datasets: [] };
+        }
+
         // Group workouts by month and exercise type
         workouts.forEach(workout => {
             const date = new Date(workout.date);
@@ -972,21 +976,32 @@ class ChartManager {
             monthlyData[monthKey][workout.exercise] += workout.totalReps;
         });
 
-        // Sort months chronologically and get last 24 months (2 years)
-        const sortedMonths = Object.keys(monthlyData)
-            .sort((a, b) => {
-                const [yearA, monthA] = a.split('-').map(Number);
-                const [yearB, monthB] = b.split('-').map(Number);
-                return yearA - yearB || monthA - monthB;
-            })
-            .slice(-24);
+        // Find the date range from first to last workout
+        const workoutDates = workouts.map(w => new Date(w.date)).sort((a, b) => a - b);
+        const firstDate = workoutDates[0];
+        const lastDate = workoutDates[workoutDates.length - 1];
+
+        // Generate all months between first and last workout date
+        const allMonths = [];
+        const currentDate = new Date(firstDate.getFullYear(), firstDate.getMonth(), 1);
+        const endDate = new Date(lastDate.getFullYear(), lastDate.getMonth(), 1);
+
+        while (currentDate <= endDate) {
+            const year = currentDate.getFullYear();
+            const month = currentDate.getMonth() + 1;
+            allMonths.push(`${year}-${month}`);
+            currentDate.setMonth(currentDate.getMonth() + 1);
+        }
+
+        // Show all months from beginning to end (no limit)
+        const monthsToShow = allMonths;
 
         // Generate color scale for exercises
         const colorScale = this.generateColorScale(exerciseTypes.length);
 
         // Create datasets for each exercise type
         const datasets = exerciseTypes.map((exerciseType, index) => {
-            const data = sortedMonths.map(month => monthlyData[month][exerciseType] || 0);
+            const data = monthsToShow.map(month => monthlyData[month] && monthlyData[month][exerciseType] || 0);
             const baseColor = colorScale[index % colorScale.length];
             const validColor = this.convertToValidColor(baseColor);
 
@@ -1003,7 +1018,7 @@ class ChartManager {
         });
 
         return {
-            labels: sortedMonths,
+            labels: monthsToShow,
             datasets: datasets
         };
     }
@@ -1014,6 +1029,10 @@ class ChartManager {
     prepareWeeklyRepsData(exerciseTypes) {
         const workouts = this.dataManager.getAllWorkouts();
         const weeklyData = {};
+
+        if (workouts.length === 0) {
+            return { labels: [], datasets: [] };
+        }
 
         // Group workouts by week and exercise type
         workouts.forEach(workout => {
@@ -1033,17 +1052,38 @@ class ChartManager {
             weeklyData[weekKey][workout.exercise] += workout.totalReps;
         });
 
-        // Sort weeks chronologically and get last 26 weeks (6 months)
-        const sortedWeeks = Object.keys(weeklyData)
-            .sort((a, b) => a.localeCompare(b))
-            .slice(-26);
+        // Find the date range from first to last workout
+        const workoutDates = workouts.map(w => new Date(w.date)).sort((a, b) => a - b);
+        const firstDate = workoutDates[0];
+        const lastDate = workoutDates[workoutDates.length - 1];
+
+        // Generate all weeks between first and last workout date
+        const allWeeks = [];
+        const currentDate = new Date(firstDate);
+        
+        // Start from the Monday of the first workout's week
+        const firstMonday = new Date(currentDate);
+        firstMonday.setDate(currentDate.getDate() - (currentDate.getDay() || 7) + 1);
+        
+        const endDate = new Date(lastDate);
+        const currentWeekStart = new Date(firstMonday);
+
+        while (currentWeekStart <= endDate) {
+            const year = currentWeekStart.getFullYear();
+            const week = this.getWeekNumber(currentWeekStart);
+            allWeeks.push(`${year}-W${week.toString().padStart(2, '0')}`);
+            currentWeekStart.setDate(currentWeekStart.getDate() + 7);
+        }
+
+        // Show all weeks from beginning to end (no limit)
+        const weeksToShow = allWeeks;
 
         // Generate color scale for exercises
         const colorScale = this.generateColorScale(exerciseTypes.length);
 
         // Create datasets for each exercise type
         const datasets = exerciseTypes.map((exerciseType, index) => {
-            const data = sortedWeeks.map(week => weeklyData[week][exerciseType] || 0);
+            const data = weeksToShow.map(week => weeklyData[week] && weeklyData[week][exerciseType] || 0);
             const baseColor = colorScale[index % colorScale.length];
             const validColor = this.convertToValidColor(baseColor);
 
@@ -1060,7 +1100,7 @@ class ChartManager {
         });
 
         return {
-            labels: sortedWeeks,
+            labels: weeksToShow,
             datasets: datasets
         };
     }
@@ -1305,17 +1345,54 @@ class ChartManager {
     }
 
     /**
-     * Get unique dates from all workouts
+     * Get unique dates from all workouts - includes all days between first and last workout
      */
     getUniqueDates() {
         const workouts = this.dataManager.getAllWorkouts();
-        const dateStrings = [...new Set(workouts.map(workout => workout.dateString))];
+        
+        if (workouts.length === 0) {
+            return [];
+        }
 
-        // Sort by actual date values instead of string comparison
-        return dateStrings.sort((a, b) => new Date(a) - new Date(b)).map(dateString => {
-            const date = new Date(dateString);
-            return this.createShortFormattedDate(date);
-        });
+        // For daily view, show all days between first and last workout to maintain consistency
+        // with weekly/monthly views that show complete time frames
+        return this.getAllDatesBetweenWorkouts();
+    }
+
+    /**
+     * Get all dates between first and last workout (for comprehensive view)
+     */
+    getAllDatesBetweenWorkouts() {
+        const workouts = this.dataManager.getAllWorkouts();
+        
+        if (workouts.length === 0) {
+            return [];
+        }
+
+        // Find first and last workout dates
+        const workoutDates = workouts.map(w => new Date(w.date)).sort((a, b) => a - b);
+        const firstDate = workoutDates[0];
+        const lastDate = workoutDates[workoutDates.length - 1];
+
+        // For daily view, limit to last 90 days to keep it manageable
+        const today = new Date();
+        const ninetyDaysAgo = new Date(today);
+        ninetyDaysAgo.setDate(today.getDate() - 90);
+        
+        // Use the later of either first workout date or 90 days ago
+        const startDate = new Date(Math.max(firstDate.getTime(), ninetyDaysAgo.getTime()));
+        const endDate = new Date(Math.min(lastDate.getTime(), today.getTime()));
+
+        // Generate all dates between start and end
+        const allDates = [];
+        const currentDate = new Date(startDate);
+        
+        while (currentDate <= endDate) {
+            allDates.push(this.createShortFormattedDate(new Date(currentDate)));
+            currentDate.setDate(currentDate.getDate() + 1);
+        }
+
+        return allDates;
     }
 
     /**
