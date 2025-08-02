@@ -641,18 +641,66 @@ input#weight, input#reps {
 /* Exercise Management Styles */
 .exercise-management {
     margin-bottom: 20px;
-    padding: 15px;
     background-color: #fff;
     border-radius: 8px;
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    overflow: hidden;
 }
 
-.exercise-management h3 {
-    margin-top: 0;
-    margin-bottom: 15px;
+.exercise-management-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 15px;
+    cursor: pointer;
+    background-color: #f8f9fa;
+    border-bottom: 1px solid #e9ecef;
+    transition: background-color 0.2s ease;
+}
+
+.exercise-management-header:hover {
+    background-color: #e9ecef;
+}
+
+.exercise-management-header h3 {
+    margin: 0;
     color: #36454f;
     font-size: 18px;
     font-weight: 600;
+}
+
+.exercise-summary {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-size: 14px;
+    color: #6c757d;
+}
+
+.exercise-count {
+    font-weight: 500;
+}
+
+.toggle-arrow {
+    font-size: 12px;
+    transition: transform 0.3s ease;
+    color: #36454f;
+}
+
+.exercise-management.collapsed .toggle-arrow {
+    transform: rotate(-90deg);
+}
+
+.exercise-management-content {
+    max-height: 500px;
+    overflow: hidden;
+    transition: max-height 0.3s ease, padding 0.3s ease;
+    padding: 15px;
+}
+
+.exercise-management.collapsed .exercise-management-content {
+    max-height: 0;
+    padding: 0 15px;
 }
 
 .exercise-management-controls {
@@ -765,6 +813,26 @@ input#weight, input#reps {
 
 /* Responsive adjustments for exercise management */
 @media (max-width: 768px) {
+    .exercise-management-header {
+        padding: 12px;
+    }
+    
+    .exercise-management-header h3 {
+        font-size: 16px;
+    }
+    
+    .exercise-summary {
+        font-size: 13px;
+    }
+    
+    .exercise-management-content {
+        padding: 12px;
+    }
+    
+    .exercise-management.collapsed .exercise-management-content {
+        padding: 0 12px;
+    }
+    
     .exercise-management-controls {
         gap: 10px;
     }

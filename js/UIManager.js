@@ -23,6 +23,11 @@ class UIManager {
             exerciseSelect: document.getElementById("exercise-select"),
             workoutListContainer: document.getElementById('workout-list-container'),
             // Exercise management elements
+            exerciseManagement: document.querySelector('.exercise-management'),
+            exerciseManagementHeader: document.getElementById("exercise-management-header"),
+            exerciseManagementContent: document.getElementById("exercise-management-content"),
+            exerciseCount: document.getElementById("exercise-count"),
+            toggleArrow: document.getElementById("toggle-arrow"),
             newExerciseInput: document.getElementById("new-exercise-input"),
             addExerciseBtn: document.getElementById("add-exercise-btn"),
             exerciseTypesList: document.getElementById("exercise-types-list"),
@@ -358,6 +363,9 @@ class UIManager {
             return;
         }
 
+        // Set initial collapsed state
+        this.updateAccordionState();
+
         // Update exercise dropdown
         this.updateExerciseDropdown();
         
@@ -408,6 +416,12 @@ class UIManager {
 
         const exerciseTypes = this.exerciseTypeManager.getExerciseTypes();
         
+        // Update exercise count in header
+        if (this.domElements.exerciseCount) {
+            const count = exerciseTypes.length;
+            this.domElements.exerciseCount.textContent = `${count} exercise type${count !== 1 ? 's' : ''}`;
+        }
+        
         // Clear existing list
         this.domElements.exerciseTypesList.innerHTML = '';
         
@@ -435,6 +449,11 @@ class UIManager {
      * Setup event listeners for exercise management
      */
     setupExerciseManagementListeners() {
+        // Accordion toggle
+        if (this.domElements.exerciseManagementHeader) {
+            this.domElements.exerciseManagementHeader.addEventListener('click', () => this.toggleAccordion());
+        }
+        
         // Add exercise button
         if (this.domElements.addExerciseBtn) {
             this.domElements.addExerciseBtn.addEventListener('click', () => this.handleAddExerciseType());
@@ -566,6 +585,35 @@ class UIManager {
             legendItem.appendChild(span);
             legendItems.appendChild(legendItem);
         });
+    }
+
+    /**
+     * Toggle the accordion state
+     */
+    toggleAccordion() {
+        if (!this.exerciseTypeManager) {
+            return;
+        }
+
+        const isCollapsed = this.exerciseTypeManager.toggleCollapsed();
+        this.updateAccordionState();
+    }
+
+    /**
+     * Update the accordion visual state
+     */
+    updateAccordionState() {
+        if (!this.exerciseTypeManager || !this.domElements.exerciseManagement) {
+            return;
+        }
+
+        const isCollapsed = this.exerciseTypeManager.getCollapsedState();
+        
+        if (isCollapsed) {
+            this.domElements.exerciseManagement.classList.add('collapsed');
+        } else {
+            this.domElements.exerciseManagement.classList.remove('collapsed');
+        }
     }
 }
 

@@ -9,6 +9,7 @@ class ExerciseTypeManager {
         
         // Configuration options
         this.hideDeletedExercisesFromTable = false; // Set to true to completely hide deleted exercises from table
+        this.isCollapsed = true; // Start collapsed to save space
         
         this.exerciseColors = {
             'Push-ups': { hue: 130, name: 'Push-ups' },
@@ -223,6 +224,28 @@ class ExerciseTypeManager {
         } catch (error) {
             return false;
         }
+    }
+
+    /**
+     * Toggle collapsed state
+     */
+    toggleCollapsed() {
+        this.isCollapsed = !this.isCollapsed;
+        return this.isCollapsed;
+    }
+
+    /**
+     * Get collapsed state
+     */
+    getCollapsedState() {
+        return this.isCollapsed;
+    }
+
+    /**
+     * Set collapsed state
+     */
+    setCollapsed(collapsed) {
+        this.isCollapsed = collapsed;
     }
 }
 
