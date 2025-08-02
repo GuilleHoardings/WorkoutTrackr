@@ -8,6 +8,7 @@ class ChartManager {
         this.charts = new Map();
         this.eventListeners = [];
         this.totalRepsViewType = 'weekly'; // 'daily', 'weekly', or 'monthly'
+        this.repsPerMinuteViewType = 'weekly'; // 'daily', 'weekly', or 'monthly'
     }
 
     /**
@@ -143,6 +144,7 @@ class ChartManager {
 
             // Set up chart view toggle buttons
             this.setupChartToggleButtons();
+            this.setupRepsPerMinuteToggleButtons();
 
             // Create reps per minute chart
             this.createRepsPerMinuteChart(exerciseTypes, uniqueDates, options);
@@ -265,7 +267,7 @@ class ChartManager {
     }
 
     /**
-     * Create reps per minute chart
+     * Create reps per minute chart - supports daily, weekly, and monthly views
      */
     createRepsPerMinuteChart(exerciseTypes, uniqueDates, options) {
         const canvasChartRepsPerMinute = document.getElementById("reps-per-minute-chart");
@@ -274,21 +276,33 @@ class ChartManager {
             return;
         }
 
-        const repsPerMinuteDatasets = this.createChartDatasets(exerciseTypes, uniqueDates, true);
+        let chartData;
+        let chartTitle;
+
+        if (this.repsPerMinuteViewType === 'weekly') {
+            chartData = this.prepareWeeklyRepsPerMinuteData(exerciseTypes);
+            chartTitle = 'Weekly Average Reps per Minute by Exercise';
+        } else if (this.repsPerMinuteViewType === 'monthly') {
+            chartData = this.prepareMonthlyRepsPerMinuteData(exerciseTypes);
+            chartTitle = 'Monthly Average Reps per Minute by Exercise';
+        } else {
+            chartData = {
+                labels: uniqueDates,
+                datasets: this.createChartDatasets(exerciseTypes, uniqueDates, true)
+            };
+            chartTitle = 'Daily Reps per Minute by Exercise';
+        }
 
         const chart = new Chart(canvasChartRepsPerMinute, {
             type: "line",
-            data: {
-                labels: uniqueDates,
-                datasets: repsPerMinuteDatasets
-            },
+            data: chartData,
             options: {
                 ...options,
                 plugins: {
                     ...options.plugins,
                     title: {
                         display: true,
-                        text: 'Reps per Minute by Exercise',
+                        text: chartTitle,
                         font: {
                             family: 'Montserrat',
                             size: 16,
@@ -296,6 +310,24 @@ class ChartManager {
                         },
                         color: '#374151',
                         padding: 20
+                    },
+                    tooltip: {
+                        ...options.plugins.tooltip,
+                        callbacks: (this.repsPerMinuteViewType === 'weekly' || this.repsPerMinuteViewType === 'monthly') ? {
+                            afterBody: function(context) {
+                                let totalRpm = 0;
+                                let count = 0;
+                                context.forEach(item => {
+                                    if (item.parsed.y > 0) {
+                                        totalRpm += item.parsed.y;
+                                        count++;
+                                    }
+                                });
+                                const avgRpm = count > 0 ? (totalRpm / count).toFixed(2) : 0;
+                                const period = this.repsPerMinuteViewType === 'weekly' ? 'week' : 'month';
+                                return `Average for ${period}: ${avgRpm} reps/min`;
+                            }.bind(this)
+                        } : undefined
                     }
                 },
                 animation: {
@@ -316,6 +348,29 @@ class ChartManager {
                     line: {
                         borderWidth: 3,
                         tension: 0.2
+                    }
+                },
+                scales: {
+                    ...options.scales,
+                    x: {
+                        ...options.scales.x,
+                        ticks: {
+                            ...options.scales.x.ticks,
+                            callback: this.getRepsPerMinuteXAxisTickCallback()
+                        }
+                    },
+                    y: {
+                        ...options.scales.y,
+                        title: {
+                            display: true,
+                            text: 'Reps per Minute',
+                            font: {
+                                family: 'Montserrat',
+                                size: 13,
+                                weight: 'bold'
+                            },
+                            color: '#64748b'
+                        }
                     }
                 }
             }
@@ -609,8 +664,19 @@ class ChartManager {
             // Update reps per minute chart
             const repsPerMinuteChart = this.charts.get('repsPerMinute');
             if (repsPerMinuteChart) {
-                repsPerMinuteChart.data.labels = uniqueDates;
-                repsPerMinuteChart.data.datasets = this.createChartDatasets(exerciseTypes, uniqueDates, true);
+                let rpmChartData;
+                if (this.repsPerMinuteViewType === 'weekly') {
+                    rpmChartData = this.prepareWeeklyRepsPerMinuteData(exerciseTypes);
+                } else if (this.repsPerMinuteViewType === 'monthly') {
+                    rpmChartData = this.prepareMonthlyRepsPerMinuteData(exerciseTypes);
+                } else {
+                    rpmChartData = {
+                        labels: uniqueDates,
+                        datasets: this.createChartDatasets(exerciseTypes, uniqueDates, true)
+                    };
+                }
+                repsPerMinuteChart.data.labels = rpmChartData.labels;
+                repsPerMinuteChart.data.datasets = rpmChartData.datasets;
                 repsPerMinuteChart.update();
             }
 
@@ -948,6 +1014,35 @@ class ChartManager {
     }
 
     /**
+     * Get X-axis tick callback based on current view type for reps per minute chart
+     */
+    getRepsPerMinuteXAxisTickCallback() {
+        if (this.repsPerMinuteViewType === 'weekly') {
+            return function(val, index) {
+                const label = this.getLabelForValue(val);
+                if (!label) return '';
+                
+                // Format week labels to be more readable
+                const [year, week] = label.split('-W');
+                return `W${week}\n${year}`;
+            };
+        } else if (this.repsPerMinuteViewType === 'monthly') {
+            return function(val, index) {
+                const label = this.getLabelForValue(val);
+                if (!label) return '';
+                
+                // Format month labels to be more readable
+                const [year, month] = label.split('-');
+                const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+                    'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+                const monthName = monthNames[parseInt(month) - 1];
+                return `${monthName}\n${year}`;
+            };
+        }
+        return undefined; // Use default for daily view
+    }
+
+    /**
      * Prepare monthly reps data for the total reps chart
      */
     prepareMonthlyRepsData(exerciseTypes) {
@@ -1106,6 +1201,202 @@ class ChartManager {
     }
 
     /**
+     * Prepare weekly reps per minute data for the reps per minute chart
+     */
+    prepareWeeklyRepsPerMinuteData(exerciseTypes) {
+        const workouts = this.dataManager.getAllWorkouts();
+        const weeklyData = {};
+
+        if (workouts.length === 0) {
+            return { labels: [], datasets: [] };
+        }
+
+        // Group workouts by week and exercise type, calculating average reps per minute
+        workouts.forEach(workout => {
+            const date = new Date(workout.date);
+            const year = date.getFullYear();
+            const week = this.getWeekNumber(date);
+            const weekKey = `${year}-W${week.toString().padStart(2, '0')}`;
+
+            if (!weeklyData[weekKey]) {
+                weeklyData[weekKey] = {};
+            }
+
+            if (!weeklyData[weekKey][workout.exercise]) {
+                weeklyData[weekKey][workout.exercise] = {
+                    totalReps: 0,
+                    totalTime: 0,
+                    workoutCount: 0
+                };
+            }
+
+            weeklyData[weekKey][workout.exercise].totalReps += workout.totalReps;
+            weeklyData[weekKey][workout.exercise].totalTime += workout.totalTime || 1;
+            weeklyData[weekKey][workout.exercise].workoutCount += 1;
+        });
+
+        // Find the date range from first to last workout
+        const workoutDates = workouts.map(w => new Date(w.date)).sort((a, b) => a - b);
+        const firstDate = workoutDates[0];
+        const lastDate = workoutDates[workoutDates.length - 1];
+
+        // Generate all weeks between first and last workout date
+        const allWeeks = [];
+        const currentDate = new Date(firstDate);
+        
+        // Start from the Monday of the first workout's week
+        const firstMonday = new Date(currentDate);
+        firstMonday.setDate(currentDate.getDate() - (currentDate.getDay() || 7) + 1);
+        
+        const endDate = new Date(lastDate);
+        const currentWeekStart = new Date(firstMonday);
+
+        while (currentWeekStart <= endDate) {
+            const year = currentWeekStart.getFullYear();
+            const week = this.getWeekNumber(currentWeekStart);
+            allWeeks.push(`${year}-W${week.toString().padStart(2, '0')}`);
+            currentWeekStart.setDate(currentWeekStart.getDate() + 7);
+        }
+
+        // Show all weeks from beginning to end (no limit)
+        const weeksToShow = allWeeks;
+
+        // Generate color scale for exercises
+        const colorScale = this.generateColorScale(exerciseTypes.length);
+
+        // Create datasets for each exercise type
+        const datasets = exerciseTypes.map((exerciseType, index) => {
+            const data = weeksToShow.map(week => {
+                if (weeklyData[week] && weeklyData[week][exerciseType]) {
+                    const weekData = weeklyData[week][exerciseType];
+                    return weekData.totalTime > 0 ? weekData.totalReps / weekData.totalTime : 0;
+                }
+                return 0;
+            });
+            const baseColor = colorScale[index % colorScale.length];
+            const validColor = this.convertToValidColor(baseColor);
+
+            return {
+                label: exerciseType,
+                data: data,
+                borderColor: validColor,
+                backgroundColor: this.adjustColorOpacity(validColor, 0.1),
+                borderWidth: 3,
+                tension: 0.2,
+                pointBackgroundColor: '#fff',
+                pointBorderColor: validColor,
+                pointBorderWidth: 2,
+                pointRadius: 4,
+                pointHoverRadius: 6,
+                pointHoverBackgroundColor: validColor,
+                pointHoverBorderColor: '#fff',
+                pointHoverBorderWidth: 2,
+                fill: true
+            };
+        });
+
+        return {
+            labels: weeksToShow,
+            datasets: datasets
+        };
+    }
+
+    /**
+     * Prepare monthly reps per minute data for the reps per minute chart
+     */
+    prepareMonthlyRepsPerMinuteData(exerciseTypes) {
+        const workouts = this.dataManager.getAllWorkouts();
+        const monthlyData = {};
+
+        if (workouts.length === 0) {
+            return { labels: [], datasets: [] };
+        }
+
+        // Group workouts by month and exercise type, calculating average reps per minute
+        workouts.forEach(workout => {
+            const date = new Date(workout.date);
+            const year = date.getFullYear();
+            const month = date.getMonth() + 1;
+            const monthKey = `${year}-${month}`;
+
+            if (!monthlyData[monthKey]) {
+                monthlyData[monthKey] = {};
+            }
+
+            if (!monthlyData[monthKey][workout.exercise]) {
+                monthlyData[monthKey][workout.exercise] = {
+                    totalReps: 0,
+                    totalTime: 0,
+                    workoutCount: 0
+                };
+            }
+
+            monthlyData[monthKey][workout.exercise].totalReps += workout.totalReps;
+            monthlyData[monthKey][workout.exercise].totalTime += workout.totalTime || 1;
+            monthlyData[monthKey][workout.exercise].workoutCount += 1;
+        });
+
+        // Find the date range from first to last workout
+        const workoutDates = workouts.map(w => new Date(w.date)).sort((a, b) => a - b);
+        const firstDate = workoutDates[0];
+        const lastDate = workoutDates[workoutDates.length - 1];
+
+        // Generate all months between first and last workout date
+        const allMonths = [];
+        const currentDate = new Date(firstDate.getFullYear(), firstDate.getMonth(), 1);
+        const endDate = new Date(lastDate.getFullYear(), lastDate.getMonth(), 1);
+
+        while (currentDate <= endDate) {
+            const year = currentDate.getFullYear();
+            const month = currentDate.getMonth() + 1;
+            allMonths.push(`${year}-${month}`);
+            currentDate.setMonth(currentDate.getMonth() + 1);
+        }
+
+        // Show all months from beginning to end (no limit)
+        const monthsToShow = allMonths;
+
+        // Generate color scale for exercises
+        const colorScale = this.generateColorScale(exerciseTypes.length);
+
+        // Create datasets for each exercise type
+        const datasets = exerciseTypes.map((exerciseType, index) => {
+            const data = monthsToShow.map(month => {
+                if (monthlyData[month] && monthlyData[month][exerciseType]) {
+                    const monthData = monthlyData[month][exerciseType];
+                    return monthData.totalTime > 0 ? monthData.totalReps / monthData.totalTime : 0;
+                }
+                return 0;
+            });
+            const baseColor = colorScale[index % colorScale.length];
+            const validColor = this.convertToValidColor(baseColor);
+
+            return {
+                label: exerciseType,
+                data: data,
+                borderColor: validColor,
+                backgroundColor: this.adjustColorOpacity(validColor, 0.1),
+                borderWidth: 3,
+                tension: 0.2,
+                pointBackgroundColor: '#fff',
+                pointBorderColor: validColor,
+                pointBorderWidth: 2,
+                pointRadius: 4,
+                pointHoverRadius: 6,
+                pointHoverBackgroundColor: validColor,
+                pointHoverBorderColor: '#fff',
+                pointHoverBorderWidth: 2,
+                fill: true
+            };
+        });
+
+        return {
+            labels: monthsToShow,
+            datasets: datasets
+        };
+    }
+
+    /**
      * Set up chart toggle buttons
      */
     setupChartToggleButtons() {
@@ -1130,6 +1421,46 @@ class ChartManager {
 
         const handleMonthlyView = () => {
             this.switchTotalRepsView('monthly');
+            this.setActiveButton(monthlyBtn, [dailyBtn, weeklyBtn]);
+        };
+
+        dailyBtn.addEventListener('click', handleDailyView);
+        weeklyBtn.addEventListener('click', handleWeeklyView);
+        monthlyBtn.addEventListener('click', handleMonthlyView);
+
+        // Store event listeners for cleanup
+        this.eventListeners.push(
+            { element: dailyBtn, event: 'click', handler: handleDailyView },
+            { element: weeklyBtn, event: 'click', handler: handleWeeklyView },
+            { element: monthlyBtn, event: 'click', handler: handleMonthlyView }
+        );
+    }
+
+    /**
+     * Set up reps per minute chart toggle buttons
+     */
+    setupRepsPerMinuteToggleButtons() {
+        const dailyBtn = document.getElementById('rpm-daily-view-btn');
+        const weeklyBtn = document.getElementById('rpm-weekly-view-btn');
+        const monthlyBtn = document.getElementById('rpm-monthly-view-btn');
+
+        if (!dailyBtn || !weeklyBtn || !monthlyBtn) {
+            console.warn("Reps per minute chart toggle buttons not found");
+            return;
+        }
+
+        const handleDailyView = () => {
+            this.switchRepsPerMinuteView('daily');
+            this.setActiveButton(dailyBtn, [weeklyBtn, monthlyBtn]);
+        };
+
+        const handleWeeklyView = () => {
+            this.switchRepsPerMinuteView('weekly');
+            this.setActiveButton(weeklyBtn, [dailyBtn, monthlyBtn]);
+        };
+
+        const handleMonthlyView = () => {
+            this.switchRepsPerMinuteView('monthly');
             this.setActiveButton(monthlyBtn, [dailyBtn, weeklyBtn]);
         };
 
@@ -1273,6 +1604,129 @@ class ChartManager {
         } catch (error) {
             console.error("Error switching chart view:", error);
             this.notificationManager.showError("Failed to switch chart view.");
+        }
+    }
+
+    /**
+     * Switch reps per minute chart view between daily, weekly, and monthly
+     */
+    switchRepsPerMinuteView(viewType) {
+        if (this.repsPerMinuteViewType === viewType) return;
+
+        this.repsPerMinuteViewType = viewType;
+        
+        // Destroy and recreate the chart with new view
+        const repsPerMinuteChart = this.charts.get('repsPerMinute');
+        if (repsPerMinuteChart) {
+            repsPerMinuteChart.destroy();
+            this.charts.delete('repsPerMinute');
+        }
+
+        // Get current data and recreate chart
+        try {
+            let exerciseTypes;
+            if (window.workoutApp && window.workoutApp.exerciseTypeManager) {
+                exerciseTypes = window.workoutApp.exerciseTypeManager.getExerciseTypes();
+            } else {
+                exerciseTypes = this.dataManager.getUniqueExerciseTypes();
+            }
+            
+            const uniqueDates = this.getUniqueDates();
+
+            // Enhanced chart options with better styling
+            const options = {
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        display: true,
+                        grid: {
+                            color: '#e8e9ed',
+                            lineWidth: 1,
+                            display: true
+                        },
+                        ticks: {
+                            color: '#64748b',
+                            font: {
+                                family: 'Montserrat',
+                                size: 12
+                            },
+                            display: true
+                        },
+                        border: {
+                            display: true,
+                            color: '#d1d5db',
+                            width: 1
+                        }
+                    },
+                    x: {
+                        display: true,
+                        position: 'bottom',
+                        grid: {
+                            color: '#e8e9ed',
+                            lineWidth: 1,
+                            display: true,
+                            drawOnChartArea: true,
+                            drawTicks: true
+                        },
+                        ticks: {
+                            color: '#64748b',
+                            font: {
+                                family: 'Montserrat',
+                                size: 10
+                            },
+                            maxRotation: 35,
+                            minRotation: 0,
+                            display: true,
+                            padding: 8
+                        },
+                        border: {
+                            display: true,
+                            color: '#d1d5db',
+                            width: 2
+                        }
+                    }
+                },
+                responsive: true,
+                maintainAspectRatio: false,
+                layout: {
+                    padding: {
+                        top: 10,
+                        bottom: 50,
+                        left: 15,
+                        right: 15
+                    }
+                },
+                plugins: {
+                    legend: {
+                        labels: {
+                            font: {
+                                family: 'Montserrat',
+                                size: 13
+                            },
+                            color: '#374151',
+                            usePointStyle: true,
+                            pointStyle: 'circle'
+                        }
+                    },
+                    tooltip: {
+                        backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                        titleColor: '#fff',
+                        bodyColor: '#fff',
+                        borderColor: '#e5e7eb',
+                        borderWidth: 1,
+                        cornerRadius: 8,
+                        displayColors: true,
+                        font: {
+                            family: 'Montserrat'
+                        }
+                    }
+                }
+            };
+
+            this.createRepsPerMinuteChart(exerciseTypes, uniqueDates, options);
+        } catch (error) {
+            console.error("Error switching reps per minute chart view:", error);
+            this.notificationManager.showError("Failed to switch reps per minute chart view.");
         }
     }
 
