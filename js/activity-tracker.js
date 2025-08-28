@@ -41,19 +41,6 @@ function generateColorScale(numColors) {
     return colors;
 }
 
-function getGreenShadeDiscrete(pushUps) {
-    // Return green, but it make it proportional to the push-up count, with a
-    // maximum of 120. The hihger the push-up count, the darker the shade of
-    // green. Using github's color scale.
-    var maxPushUps = 160;
-    var color = '#ebedf0';
-    if (pushUps > 0) {
-        var colors = ['#ffffff', '#d8f0b1', '#96e08e', '#2dbf55', '#1e763e', '#0e6630', '#08401a']
-        var shade = Math.round((pushUps / maxPushUps) * (color.length + 1));
-    }
-    return colors[shade] || color;
-}
-
 /**
  * Gets the color for a specific exercise with intensity based on reps
  * 
@@ -76,7 +63,8 @@ function getColorForExercise(exercise, reps) {
             'Sit-ups': { hue: 30, name: 'Sit-ups' },         // Orange
             'Lunges': { hue: 300, name: 'Lunges' },          // Magenta
             'Dips': { hue: 180, name: 'Dips' },              // Cyan
-            'Planks': { hue: 60, name: 'Planks' }            // Yellow
+            'Planks': { hue: 60, name: 'Planks' },            // Yellow
+            'Back': { hue: 90, name: 'Back' }                
         };
         exerciseColor = exerciseColors[exercise] || { hue: 130, name: 'Unknown' };
     }
@@ -174,7 +162,8 @@ function createActivityChart(data, canvas) {
     const years = data.map(d => new Date(d.date).getFullYear());
     const minYear = Math.min(...years);
     const maxYear = Math.max(...years);
-    const numYears = maxYear - minYear + 1; var ctx = canvas.getContext('2d');
+    const numYears = maxYear - minYear + 1;
+    var ctx = canvas.getContext('2d');
 
     // Clean styling constants
     const cellSize = 11;
