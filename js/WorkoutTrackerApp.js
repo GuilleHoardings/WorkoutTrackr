@@ -284,6 +284,19 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 });
 
+// Register Service Worker for PWA functionality
+if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+        navigator.serviceWorker.register('/sw.js')
+            .then(registration => {
+                console.log('Service Worker registered successfully:', registration);
+            })
+            .catch(registrationError => {
+                console.log('Service Worker registration failed:', registrationError);
+            });
+    });
+}
+
 // Handle page unload cleanup
 window.addEventListener('beforeunload', () => {
     if (window.workoutApp) {

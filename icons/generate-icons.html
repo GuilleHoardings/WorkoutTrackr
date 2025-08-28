@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Icon Generator for WorkoutTrackr PWA</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; }
+        .container { max-width: 600px; margin: 0 auto; }
+        canvas { border: 1px solid #ccc; margin: 10px 0; }
+        button { padding: 10px 20px; margin: 5px; background: #2196F3; color: white; border: none; cursor: pointer; }
+        button:hover { background: #1976D2; }
+        .icon-preview { display: inline-block; margin: 10px; text-align: center; }
+        .instructions { background: #f5f5f5; padding: 15px; border-radius: 5px; margin: 20px 0; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>PWA Icon Generator</h1>
+        <div class="instructions">
+            <h3>Instructions:</h3>
+            <ol>
+                <li>This page will help you create PWA icons from your existing pushup.png</li>
+                <li>Click "Load pushup.png" to load your existing icon</li>
+                <li>Click the generate buttons to create 192x192 and 512x512 icons</li>
+                <li>Right-click each generated icon and "Save image as..." to save them in the icons/ folder</li>
+                <li>Save as "icon-192x192.png" and "icon-512x512.png" respectively</li>
+            </ol>
+        </div>
+        
+        <button onclick="loadExistingIcon()">Load pushup.png</button>
+        <br>
+        
+        <div id="original-container" style="display: none;">
+            <h3>Original Image:</h3>
+            <img id="original-img" style="max-width: 200px; border: 1px solid #ccc;">
+            <br><br>
+            
+            <button onclick="generateIcon(192)">Generate 192x192 Icon</button>
+            <button onclick="generateIcon(512)">Generate 512x512 Icon</button>
+            
+            <div id="generated-icons"></div>
+        </div>
+    </div>
+
+    <script>
+        function loadExistingIcon() {
+            const img = document.getElementById('original-img');
+            img.src = '../pushup.png';
+            img.onload = function() {
+                document.getElementById('original-container').style.display = 'block';
+            };
+            img.onerror = function() {
+                alert('Could not load pushup.png. Make sure this HTML file is in the icons/ directory and pushup.png is in the parent directory.');
+            };
+        }
+
+        function generateIcon(size) {
+            const originalImg = document.getElementById('original-img');
+            const canvas = document.createElement('canvas');
+            const ctx = canvas.getContext('2d');
+            
+            canvas.width = size;
+            canvas.height = size;
+            
+            // Fill with white background
+            ctx.fillStyle = '#ffffff';
+            ctx.fillRect(0, 0, size, size);
+            
+            // Calculate scaling to fit the image while maintaining aspect ratio
+            const scale = Math.min(size / originalImg.naturalWidth, size / originalImg.naturalHeight) * 0.8; // 0.8 for padding
+            const scaledWidth = originalImg.naturalWidth * scale;
+            const scaledHeight = originalImg.naturalHeight * scale;
+            
+            // Center the image
+            const x = (size - scaledWidth) / 2;
+            const y = (size - scaledHeight) / 2;
+            
+            ctx.drawImage(originalImg, x, y, scaledWidth, scaledHeight);
+            
+            // Create preview
+            const iconContainer = document.createElement('div');
+            iconContainer.className = 'icon-preview';
+            
+            const title = document.createElement('h4');
+            title.textContent = `${size}x${size} Icon`;
+            
+            const img = document.createElement('img');
+            img.src = canvas.toDataURL();
+            img.style.width = '100px';
+            img.style.height = '100px';
+            img.style.border = '1px solid #ccc';
+            img.title = `Right-click and save as icon-${size}x${size}.png`;
+            
+            const instructions = document.createElement('p');
+            instructions.innerHTML = `<small>Right-click → Save as: <strong>icon-${size}x${size}.png</strong></small>`;
+            
+            iconContainer.appendChild(title);
+            iconContainer.appendChild(img);
+            iconContainer.appendChild(instructions);
+            
+            document.getElementById('generated-icons').appendChild(iconContainer);
+        }
+    </script>
+</body>
+</html>
