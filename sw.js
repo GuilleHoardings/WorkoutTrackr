@@ -1,20 +1,20 @@
 const CACHE_NAME = 'workouttrackr-v1';
 const urlsToCache = [
-  '/',
-  '/index.html',
-  '/styles.css',
-  '/js/activity-tracker.js',
-  '/js/ExerciseTypeManager.js',
-  '/js/NotificationManager.js',
-  '/js/ValidationManager.js',
-  '/js/WorkoutDataManager.js',
-  '/js/UIManager.js',
-  '/js/ChartManager.js',
-  '/js/CSVManager.js',
-  '/js/WorkoutTrackerApp.js',
-  '/js/ResponsiveEnhancements.js',
-  '/pushup.png',
-  '/manifest.json'
+  './',
+  './index.html',
+  './styles.css',
+  './js/activity-tracker.js',
+  './js/ExerciseTypeManager.js',
+  './js/NotificationManager.js',
+  './js/ValidationManager.js',
+  './js/WorkoutDataManager.js',
+  './js/UIManager.js',
+  './js/ChartManager.js',
+  './js/CSVManager.js',
+  './js/WorkoutTrackerApp.js',
+  './js/ResponsiveEnhancements.js',
+  './pushup.png',
+  './manifest.json'
 ];
 
 // Install event - cache resources
@@ -40,7 +40,7 @@ self.addEventListener('fetch', event => {
       .catch(() => {
         // If both cache and network fail, could return offline page
         if (event.request.destination === 'document') {
-          return caches.match('/index.html');
+          return caches.match('./index.html');
         }
       })
   );
