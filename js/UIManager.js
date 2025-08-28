@@ -92,6 +92,9 @@ class UIManager {
 
             // Add event listeners to toggle the details view
             this.setupToggleListeners();
+
+            // Notify layout enhancements that list changed
+            document.dispatchEvent(new CustomEvent('workoutListUpdated'));
         } catch (error) {
             console.error("Error updating workout table:", error);
             this.notificationManager.showWarning("Failed to update workout display. Please refresh the page.");

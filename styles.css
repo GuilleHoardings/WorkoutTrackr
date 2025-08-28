@@ -35,6 +35,19 @@ body {
     .workout-detail.exercise { font-size: 16px; }
 }
 
+/* Hidden workout rows in mobile collapsed view */
+.mobile-collapsed-row { display: none !important; }
+
+/* Expand/collapse control */
+#workout-list-expand-btn {
+    margin: 8px 0 20px 0;
+    width: 100%;
+    background: #3b82f6;
+    font-weight: 600;
+}
+#workout-list-expand-btn.collapsed::after { content: ' ▼'; }
+#workout-list-expand-btn.expanded::after { content: ' ▲'; }
+
 @media (max-width: 600px) {
     .csv-controls { flex-direction: column; align-items: stretch; }
     .csv-controls button { width: 100%; }
