@@ -35,6 +35,18 @@ body {
     .workout-detail.exercise { font-size: 16px; }
 }
 
+/* Extend full-width form controls to any single-column layout up to 1050px */
+@media (max-width: 1050px) {
+    .form-controls-row { flex-direction: column; align-items: stretch; }
+    .form-controls-row .form-group { width: 100%; min-width: 100%; }
+    .form-controls-row select#exercise-select,
+    .form-controls-row input[type="number"],
+    .form-controls-row input#weight,
+    .form-controls-row input#reps,
+    .form-controls-row button,
+    .form-controls-row input[type="submit"] { width: 100% !important; }
+}
+
 /* Hidden workout rows in mobile collapsed view */
 .mobile-collapsed-row { display: none !important; }
 
