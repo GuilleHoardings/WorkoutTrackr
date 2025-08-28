@@ -7,6 +7,42 @@ body {
     /* Slight background color to improve contrast */
 }
 
+/* --- Essential Mobile Layout Enhancements --- */
+@media (max-width: 1050px) {
+    .container {
+        flex-direction: column;
+        gap: 24px;
+    }
+    .right-side {
+        box-shadow: none;
+        padding: 0 0 10px 0;
+        background: transparent;
+    }
+    .left-side { padding: 0; }
+}
+
+@media (max-width: 800px) {
+    .form-controls-row { flex-direction: column; align-items: stretch; }
+    .form-controls-row .form-group { min-width: 100%; }
+    button, input[type="submit"] { width: 100%; }
+    select#exercise-select, input#weight, input#reps { width: 100%; }
+    #logo { width: 56px; }
+    h1 { font-size: 22px; padding: 12px; }
+    .workout-list-header { display: none; }
+    #workout-list-container { border-top: 1px solid #ddd; }
+    .workout-item { flex-direction: column; align-items: flex-start; padding: 10px 12px; }
+    .workout-detail { justify-content: flex-start !important; width: 100%; padding: 4px 0; }
+    .workout-detail.exercise { font-size: 16px; }
+}
+
+@media (max-width: 600px) {
+    .csv-controls { flex-direction: column; align-items: stretch; }
+    .csv-controls button { width: 100%; }
+    .chart-container { width: 100%; min-width: 0; height: 320px; }
+    #reps-chart, #reps-per-minute-chart { height: 280px; }
+}
+/* --- End Mobile Layout Enhancements --- */
+
 /* Header styling */
 h1 {
     background-color: rgba(54, 69, 79, 1);
