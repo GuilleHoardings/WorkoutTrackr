@@ -63,8 +63,8 @@ function getColorForExercise(exercise, reps) {
             'Sit-ups': { hue: 30, name: 'Sit-ups' },         // Orange
             'Lunges': { hue: 300, name: 'Lunges' },          // Magenta
             'Dips': { hue: 180, name: 'Dips' },              // Cyan
-            'Planks': { hue: 60, name: 'Planks' },            // Yellow
-            'Back': { hue: 90, name: 'Back' }                
+            'Planks': { hue: 60, name: 'Planks' },           // Yellow
+            'Back': { hue: 45, name: 'Back' },               // Gold/Yellow
         };
         exerciseColor = exerciseColors[exercise] || { hue: 130, name: 'Unknown' };
     }

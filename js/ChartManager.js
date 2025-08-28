@@ -711,7 +711,6 @@ class ChartManager {
      * Create chart datasets for each exercise type
      */
     createChartDatasets(exerciseTypes, uniqueDates, isRepsPerMinute = false) {
-        const colorScale = this.generateColorScale(exerciseTypes.length);
         const datasets = [];
         const workouts = this.dataManager.getAllWorkouts();
 
@@ -733,8 +732,8 @@ class ChartManager {
             // Fill in data for all dates (with zeros for missing dates to show gaps)
             const valueData = uniqueDates.map(date => dateToValue[date] || 0);
 
-            // Get base color for this exercise
-            const baseColor = colorScale[index % colorScale.length];
+            // Get base color for this exercise (consistent across all charts)
+            const baseColor = this.getExerciseBaseColor(exerciseType, index);
 
             // Create appropriate dataset based on chart type
             if (isRepsPerMinute) {
@@ -826,6 +825,32 @@ class ChartManager {
         }
         // Fallback - return original color
         return color;
+    }
+    /**
+     * Get a consistent base color for an exercise type across all charts.
+     * Priority:
+     * 1. ExerciseTypeManager hue mapping (same as activity tracker)
+     * 2. Stable hash-based HSL if manager absent
+     * 3. Fallback to generated color scale
+     */
+    getExerciseBaseColor(exerciseType, index = 0) {
+        try {
+            if (window.workoutApp && window.workoutApp.exerciseTypeManager) {
+                const info = window.workoutApp.exerciseTypeManager.getExerciseColor(exerciseType);
+                if (info && typeof info.hue === 'number') {
+                    // Fixed lightness for charts (activity tracker varies lightness by reps)
+                    return `hsl(${info.hue}, 70%, 45%)`;
+                }
+            }
+        } catch (e) { /* ignore and fallback */ }
+
+        // Stable hash-based hue (deterministic) if manager unavailable
+        let hash = 0;
+        for (let i = 0; i < exerciseType.length; i++) {
+            hash = exerciseType.charCodeAt(i) + ((hash << 5) - hash);
+        }
+        const hue = Math.abs(hash) % 360;
+        return `hsl(${hue}, 70%, 45%)`;
     }
 
     /**
@@ -1091,13 +1116,10 @@ class ChartManager {
         // Show all months from beginning to end (no limit)
         const monthsToShow = allMonths;
 
-        // Generate color scale for exercises
-        const colorScale = this.generateColorScale(exerciseTypes.length);
-
         // Create datasets for each exercise type
         const datasets = exerciseTypes.map((exerciseType, index) => {
             const data = monthsToShow.map(month => monthlyData[month] && monthlyData[month][exerciseType] || 0);
-            const baseColor = colorScale[index % colorScale.length];
+            const baseColor = this.getExerciseBaseColor(exerciseType, index);
             const validColor = this.convertToValidColor(baseColor);
 
             return {
@@ -1173,13 +1195,10 @@ class ChartManager {
         // Show all weeks from beginning to end (no limit)
         const weeksToShow = allWeeks;
 
-        // Generate color scale for exercises
-        const colorScale = this.generateColorScale(exerciseTypes.length);
-
         // Create datasets for each exercise type
         const datasets = exerciseTypes.map((exerciseType, index) => {
             const data = weeksToShow.map(week => weeklyData[week] && weeklyData[week][exerciseType] || 0);
-            const baseColor = colorScale[index % colorScale.length];
+            const baseColor = this.getExerciseBaseColor(exerciseType, index);
             const validColor = this.convertToValidColor(baseColor);
 
             return {
@@ -1261,9 +1280,6 @@ class ChartManager {
         // Show all weeks from beginning to end (no limit)
         const weeksToShow = allWeeks;
 
-        // Generate color scale for exercises
-        const colorScale = this.generateColorScale(exerciseTypes.length);
-
         // Create datasets for each exercise type
         const datasets = exerciseTypes.map((exerciseType, index) => {
             const data = weeksToShow.map(week => {
@@ -1273,7 +1289,7 @@ class ChartManager {
                 }
                 return 0;
             });
-            const baseColor = colorScale[index % colorScale.length];
+            const baseColor = this.getExerciseBaseColor(exerciseType, index);
             const validColor = this.convertToValidColor(baseColor);
 
             return {
@@ -1356,9 +1372,6 @@ class ChartManager {
         // Show all months from beginning to end (no limit)
         const monthsToShow = allMonths;
 
-        // Generate color scale for exercises
-        const colorScale = this.generateColorScale(exerciseTypes.length);
-
         // Create datasets for each exercise type
         const datasets = exerciseTypes.map((exerciseType, index) => {
             const data = monthsToShow.map(month => {
@@ -1368,7 +1381,7 @@ class ChartManager {
                 }
                 return 0;
             });
-            const baseColor = colorScale[index % colorScale.length];
+            const baseColor = this.getExerciseBaseColor(exerciseType, index);
             const validColor = this.convertToValidColor(baseColor);
 
             return {

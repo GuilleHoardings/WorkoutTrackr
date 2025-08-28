@@ -12,13 +12,14 @@ class ExerciseTypeManager {
         this.isCollapsed = true; // Start collapsed to save space
         
         this.exerciseColors = {
-            'Push-ups': { hue: 130, name: 'Push-ups' },
-            'Pull-ups': { hue: 210, name: 'Pull-ups' },
-            'Squats': { hue: 270, name: 'Squats' },
-            'Sit-ups': { hue: 30, name: 'Sit-ups' },
-            'Lunges': { hue: 300, name: 'Lunges' },
-            'Dips': { hue: 180, name: 'Dips' },
-            'Planks': { hue: 60, name: 'Planks' }
+            'Push-ups': { hue: 130, name: 'Push-ups' },      // Green
+            'Pull-ups': { hue: 210, name: 'Pull-ups' },      // Blue
+            'Squats': { hue: 270, name: 'Squats' },          // Purple
+            'Sit-ups': { hue: 30, name: 'Sit-ups' },         // Orange
+            'Lunges': { hue: 300, name: 'Lunges' },          // Magenta
+            'Dips': { hue: 180, name: 'Dips' },              // Cyan
+            'Planks': { hue: 60, name: 'Planks' },           // Yellow
+            'Back': { hue: 45, name: 'Back' },               // Gold/Yellow
         };
         
         // Default exercise types
