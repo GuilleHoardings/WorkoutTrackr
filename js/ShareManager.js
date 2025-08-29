@@ -15,6 +15,32 @@ class ShareManager {
         }
     }
 
+    // ---------- Small Utilities (kept private-ish) ----------
+    getBaseUrl() {
+        return window.location.origin + window.location.pathname;
+    }
+
+    createModal(contentHtml, { maxWidth = '500px', onClose } = {}) {
+        const modal = document.createElement('div');
+        modal.style.cssText = `
+            position: fixed; top: 0; left: 0; right: 0; bottom: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.5); display: flex; align-items: center;
+            justify-content: center; z-index: 10000; padding: 10px; box-sizing: border-box;`;
+
+        const dialog = document.createElement('div');
+        dialog.style.cssText = `background: white; padding: 20px; border-radius: 8px; width: 100%; max-width: ${maxWidth}; box-shadow: 0 4px 12px rgba(0,0,0,0.25);`;
+        dialog.innerHTML = contentHtml;
+        modal.appendChild(dialog);
+        document.body.appendChild(modal);
+
+        const close = () => {
+            modal.remove();
+            if (onClose) onClose();
+        };
+
+        return { modal, dialog, close };
+    }
+
     // Simple compression: pack with dictionaries & base64url encode
     compressOptimized(optimizedObj) {
         const dateMap = new Map();
@@ -32,6 +58,7 @@ class ShareManager {
         return 'C1' + b64; // prefix for format identification
     }
 
+    // Decompresses a compressed URL-safe string back into the optimized object (simpler contract)
     decompressString(compressed) {
         if (!compressed.startsWith('C1')) throw new Error('Unsupported compressed data');
         let b64 = compressed.slice(2).replace(/-/g,'+').replace(/_/g,'/');
@@ -39,17 +66,12 @@ class ShareManager {
         const json = atob(b64);
         const packed = JSON.parse(json);
         if (packed.v !== 1) throw new Error('Bad version');
-        const optimized = {
+        return {
             v: 1,
             t: packed.t,
             x: packed.x || [],
-            w: packed.w.map(([di, ei, series]) => [
-                packed.d[di],
-                packed.e[ei],
-                series
-            ])
+            w: packed.w.map(([di, ei, series]) => [packed.d[di], packed.e[ei], series])
         };
-        return JSON.stringify(optimized);
     }
 
     // Build optimized transferable structure from internal workouts
@@ -97,82 +119,80 @@ class ShareManager {
         return { timestamp: optimized.t, exerciseTypes: optimized.x || [], workouts };
     }
 
+    // Build raw share payload
+    buildSharePayload(workouts, exerciseTypes, extra = {}) {
+        return {
+            workouts,
+            exerciseTypes,
+            timestamp: new Date().toISOString(),
+            ...extra
+        };
+    }
+
+    // End-to-end compression pipeline returning stats + URL
+    generateCompressedLink(shareData) {
+        const originalJson = JSON.stringify(shareData);
+        const optimized = this.optimizeDataForCompression(shareData);
+        const optimizedJson = JSON.stringify(optimized);
+        const compressed = this.compressOptimized(optimized);
+        const baseUrl = this.getBaseUrl();
+        const shareUrl = `${baseUrl}?c=${compressed}`;
+        return {
+            shareUrl,
+            compressed,
+            stats: {
+                workouts: shareData.workouts.length,
+                originalSize: originalJson.length,
+                optimizedSize: optimizedJson.length,
+                compressedSize: compressed.length,
+                compressionRatio: ((originalJson.length - compressed.length) / originalJson.length * 100).toFixed(1)
+            }
+        };
+    }
+
+    logCompressionStats(stats, shareUrl) {
+        console.log(`Compression stats:\n` +
+            `  Original: ${stats.originalSize} chars (${(stats.originalSize / 1024).toFixed(1)}KB)\n` +
+            `  Optimized: ${stats.optimizedSize} chars (${(stats.optimizedSize / 1024).toFixed(1)}KB)\n` +
+            `  Compressed: ${stats.compressedSize} chars (${(stats.compressedSize / 1024).toFixed(1)}KB)\n` +
+            `  Saved: ${stats.compressionRatio}%\n` +
+            `  URL length: ${shareUrl.length} chars`);
+    }
+
     async shareData() {
         try {
             const workouts = this.workoutDataManager.getAllWorkouts();
             const exerciseTypes = this.exerciseTypeManager.getExerciseTypes();
-            
-            const shareData = {
-                workouts: workouts,
-                exerciseTypes: exerciseTypes,
-                timestamp: new Date().toISOString()
-            };
+            const payload = this.buildSharePayload(workouts, exerciseTypes);
 
-            // Calculate original size before optimization
-            const originalJsonString = JSON.stringify(shareData);
-            const originalSize = originalJsonString.length;
-
-            // Optimize data structure for compression
-            const optimizedData = this.optimizeDataForCompression(shareData);
-            const jsonString = JSON.stringify(optimizedData);
-            
-            // Show compression statistics
             this.notificationManager.showInfo(
-                `Compressing ${workouts.length} workouts (${(originalSize / 1024).toFixed(1)}KB)...`
+                `Compressing ${workouts.length} workouts...`
             );
 
-            // Compress the data
-            const compressed = this.compressOptimized(optimizedData);
-            const compressedSize = compressed.length;
-            const compressionRatio = ((originalSize - compressedSize) / originalSize * 100).toFixed(1);
-            
-            // Create the share URL
-            const currentUrl = window.location.origin + window.location.pathname;
-            const shareUrl = `${currentUrl}?c=${compressed}`;
-            
-            console.log(`Compression stats:
-                Original: ${originalSize} chars (${(originalSize / 1024).toFixed(1)}KB)
-                Optimized: ${jsonString.length} chars (${(jsonString.length / 1024).toFixed(1)}KB)
-                Compressed: ${compressedSize} chars (${(compressedSize / 1024).toFixed(1)}KB)
-                Saved: ${compressionRatio}%
-                URL length: ${shareUrl.length} chars`);
-            
+            const { shareUrl, stats } = this.generateCompressedLink(payload);
+            this.logCompressionStats(stats, shareUrl);
+
             if (shareUrl.length > this.maxUrlLength) {
-                this.handleLargeDataset(shareData, workouts.length, {
-                    original: originalSize,
-                    compressed: compressedSize,
-                    ratio: compressionRatio
+                this.handleLargeDataset(payload, stats.workouts, {
+                    original: stats.originalSize,
+                    compressed: stats.compressedSize,
+                    ratio: stats.compressionRatio
                 });
-            } else {
-                await this.copyToClipboard(shareUrl);
-                this.notificationManager.showSuccess(
-                    `Share link copied! Compressed ${compressionRatio}% (${workouts.length} workouts)`
-                );
+                return;
             }
-            
+
+            await this.copyToClipboard(shareUrl);
+            this.notificationManager.showSuccess(
+                `Share link copied! Compressed ${stats.compressionRatio}% (${stats.workouts} workouts)`
+            );
         } catch (error) {
             console.error('Error creating share link:', error);
-            this.notificationManager.showError(
-                'Error creating share link.'
-            );
+            this.notificationManager.showError('Error creating share link.');
         }
     }
 
     handleLargeDataset(shareData, workoutCount, compressionStats) {
-        const modal = document.createElement('div');
-        modal.style.cssText = `
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0,0,0,0.5); display: flex; align-items: center;
-            justify-content: center; z-index: 10000;
-        `;
-        
-        const dialog = document.createElement('div');
-        dialog.style.cssText = `
-            background: white; padding: 20px; border-radius: 8px;
-            max-width: 500px; text-align: center;
-        `;
-        
-        dialog.innerHTML = `
+        const { dialog, close } = this.createModal(`
             <h3>Dataset Too Large for URL</h3>
             <div style="background: #f5f5f5; padding: 15px; border-radius: 4px; margin: 15px 0; text-align: left;">
                 <strong>Compression Results:</strong><br>
@@ -183,62 +203,32 @@ class ShareManager {
             </div>
             <p>Choose an alternative sharing method:</p>
             <div style="margin: 20px 0;">
-                <button id="share-recent" style="margin: 5px; padding: 10px 15px; background: #2196F3; color: white; border: none; border-radius: 4px; cursor: pointer;">
-                    Share Recent 100 Workouts
-                </button>
-                <button id="share-csv" style="margin: 5px; padding: 10px 15px; background: #4CAF50; color: white; border: none; border-radius: 4px; cursor: pointer;">
-                    Download CSV Instead
-                </button>
+                <button id="share-recent" style="margin: 5px; padding: 10px 15px; background: #2196F3; color: white; border: none; border-radius: 4px; cursor: pointer;">Share Recent 100 Workouts</button>
+                <button id="share-csv" style="margin: 5px; padding: 10px 15px; background: #4CAF50; color: white; border: none; border-radius: 4px; cursor: pointer;">Download CSV Instead</button>
             </div>
-            <button id="cancel-share" style="background: #ccc; border: none; padding: 10px 20px; border-radius: 4px; cursor: pointer;">
-                Cancel
-            </button>
-        `;
-        
-        modal.appendChild(dialog);
-        document.body.appendChild(modal);
-        
+            <button id="cancel-share" style="background: #ccc; border: none; padding: 10px 20px; border-radius: 4px; cursor: pointer;">Cancel</button>
+        `, { maxWidth: '500px' });
+
         dialog.querySelector('#share-recent').addEventListener('click', async () => {
             await this.shareRecentWorkouts(shareData, 100);
-            modal.remove();
+            close();
         });
-        
-        dialog.querySelector('#share-csv').addEventListener('click', () => {
-            this.downloadAsCSV();
-            modal.remove();
-        });
-        
-        dialog.querySelector('#cancel-share').addEventListener('click', () => {
-            modal.remove();
-        });
+        dialog.querySelector('#share-csv').addEventListener('click', () => { this.downloadAsCSV(); close(); });
+        dialog.querySelector('#cancel-share').addEventListener('click', close);
     }
 
     async shareRecentWorkouts(shareData, limit) {
         try {
-            const sortedWorkouts = shareData.workouts
+            const sortedWorkouts = [...shareData.workouts]
                 .sort((a, b) => new Date(b.date) - new Date(a.date))
                 .slice(0, limit);
-            
-            const limitedShareData = {
-                ...shareData,
-                workouts: sortedWorkouts,
+            const limited = this.buildSharePayload(sortedWorkouts, shareData.exerciseTypes, {
                 isPartial: true,
                 originalCount: shareData.workouts.length
-            };
-            
-            const optimizedData = this.optimizeDataForCompression(limitedShareData);
-            const jsonString = JSON.stringify(optimizedData);
-            const compressed = this.compressOptimized(optimizedData);
-            
-            const currentUrl = window.location.origin + window.location.pathname;
-            const shareUrl = `${currentUrl}?c=${compressed}`;
-            
+            });
+            const { shareUrl } = this.generateCompressedLink(limited);
             await this.copyToClipboard(shareUrl);
-            
-            this.notificationManager.showSuccess(
-                `Share link created with ${limit} most recent workouts (of ${shareData.workouts.length} total)`
-            );
-            
+            this.notificationManager.showSuccess(`Share link created with ${limit} most recent workouts (of ${shareData.workouts.length} total)`);
         } catch (error) {
             console.error('Error sharing recent workouts:', error);
             this.notificationManager.showError('Error creating share link.');
@@ -251,7 +241,7 @@ class ShareManager {
         if (downloadButton) {
             downloadButton.click();
         }
-        
+
         this.notificationManager.showSuccess(
             'CSV file downloaded. Share this file to transfer your workout data.'
         );
@@ -281,37 +271,23 @@ class ShareManager {
     }
 
     showManualCopyDialog(text) {
-        const modal = document.createElement('div');
-        modal.style.cssText = `
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0,0,0,0.5); display: flex; align-items: center;
-            justify-content: center; z-index: 10000;
-        `;
-        
-        const dialog = document.createElement('div');
-        dialog.style.cssText = `
-            background: white; padding: 20px; border-radius: 8px;
-            max-width: 90%; max-height: 90%; overflow: auto;
-        `;
-        dialog.innerHTML = `
+        const { dialog } = this.createModal(`
             <h3>Copy Share Link</h3>
             <p>Please copy this link manually:</p>
             <textarea readonly style="width: 100%; height: 100px; margin: 10px 0; font-family: monospace; font-size: 12px;">${text}</textarea>
-            <button id="close-copy-modal">Close</button>
-        `;
-        
-        modal.appendChild(dialog);
-        document.body.appendChild(modal);
-
-        dialog.querySelector('#close-copy-modal').addEventListener('click', () => {
-            modal.remove();
-        });
-        
+            <div style="text-align:right;">
+                <button id="close-copy-modal" style="background:#2196F3; color:white; border:none; padding:8px 16px; border-radius:4px; cursor:pointer;">Close</button>
+            </div>
+        `, { maxWidth: '600px' });
         const textarea = dialog.querySelector('textarea');
-        textarea.focus();
-        textarea.select();
+        if (textarea) { textarea.focus(); textarea.select(); }
+        dialog.querySelector('#close-copy-modal').addEventListener('click', () => {
+            if (typeof dialog.parentElement?.remove === 'function') {
+                dialog.parentElement.remove();
+            }
+        });
     }
-    }
+    
 
     checkForSharedData() {
         const urlParams = new URLSearchParams(window.location.search);
@@ -327,22 +303,13 @@ class ShareManager {
 
     async importCompressedData(compressedData) {
         try {
-            this.notificationManager.showInfo(
-                'Decompressing shared workout data...'
-            );
-            
-            // Use custom decompression for URL data
-            const jsonString = this.decompressString(compressedData);
-            const optimizedData = JSON.parse(jsonString);
+            this.notificationManager.showInfo('Decompressing shared workout data...');
+            const optimizedData = this.decompressString(compressedData);
             const shareData = this.restoreDataFromOptimized(optimizedData);
-            
             this.showImportDialog(shareData);
-            
         } catch (error) {
             console.error('Error importing compressed data:', error);
-            this.notificationManager.showError(
-                'Error importing shared workout data. The link may be corrupted.'
-            );
+            this.notificationManager.showError('Error importing shared workout data. The link may be corrupted.');
         }
     }
 
@@ -360,51 +327,21 @@ class ShareManager {
     }
 
     showImportDialog(shareData) {
-        const modal = document.createElement('div');
-        modal.style.cssText = `
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0,0,0,0.5); display: flex; align-items: center;
-            justify-content: center; z-index: 10000;
-        `;
-        
-        const dialog = document.createElement('div');
-        dialog.style.cssText = `
-            background: white; padding: 20px; border-radius: 8px;
-            max-width: 400px; text-align: center;
-        `;
-        
         const workoutCount = shareData.workouts.length;
         const shareDate = new Date(shareData.timestamp).toLocaleDateString();
         const isPartial = shareData.isPartial;
-        
-        dialog.innerHTML = `
+        const { dialog, close } = this.createModal(`
             <h3>Import Shared Workouts</h3>
             <p>Someone shared ${workoutCount} workout(s) with you from ${shareDate}.</p>
             ${isPartial ? `<p><em>Note: This is a partial dataset (${shareData.originalCount} total workouts)</em></p>` : ''}
             <p><strong>This will replace all your current data!</strong></p>
             <div style="margin-top: 20px;">
-                <button id="confirm-import" style="margin-right: 10px; background: #2196F3; color: white; border: none; padding: 10px 20px; border-radius: 4px; cursor: pointer;">
-                    Import Data
-                </button>
-                <button id="cancel-import" style="background: #ccc; border: none; padding: 10px 20px; border-radius: 4px; cursor: pointer;">
-                    Cancel
-                </button>
+                <button id="confirm-import" style="margin-right: 10px; background: #2196F3; color: white; border: none; padding: 10px 20px; border-radius: 4px; cursor: pointer;">Import Data</button>
+                <button id="cancel-import" style="background: #ccc; border: none; padding: 10px 20px; border-radius: 4px; cursor: pointer;">Cancel</button>
             </div>
-        `;
-        
-        modal.appendChild(dialog);
-        document.body.appendChild(modal);
-        
-        dialog.querySelector('#confirm-import').addEventListener('click', () => {
-            this.performImport(shareData);
-            modal.remove();
-            window.history.replaceState({}, document.title, window.location.pathname);
-        });
-        
-        dialog.querySelector('#cancel-import').addEventListener('click', () => {
-            modal.remove();
-            window.history.replaceState({}, document.title, window.location.pathname);
-        });
+        `, { maxWidth: '400px', onClose: () => window.history.replaceState({}, document.title, window.location.pathname) });
+        dialog.querySelector('#confirm-import').addEventListener('click', () => { this.performImport(shareData); close(); });
+        dialog.querySelector('#cancel-import').addEventListener('click', close);
     }
 
     performImport(shareData) {
