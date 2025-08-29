@@ -74,6 +74,17 @@ class ExerciseTypeManager {
     }
 
     /**
+     * Set exercise types (for importing)
+     * @param {Array} exerciseTypes - Array of exercise type names
+     */
+    async setExerciseTypes(exerciseTypes) {
+        if (Array.isArray(exerciseTypes)) {
+            this.exerciseTypes = [...exerciseTypes];
+            await this.saveExerciseTypes();
+        }
+    }
+
+    /**
      * Add a new exercise type
      * @param {string} exerciseType - The exercise type to add
      * @returns {boolean} True if added successfully, false if already exists

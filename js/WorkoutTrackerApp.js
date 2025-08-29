@@ -11,6 +11,7 @@ class WorkoutTrackerApp {
         this.uiManager = new UIManager(this.dataManager, this.notificationManager, this.refreshUI.bind(this), this.exerciseTypeManager);
         this.chartManager = new ChartManager(this.dataManager, this.notificationManager);
         this.csvManager = new CSVManager(this.dataManager, this.notificationManager, this.validationManager);
+        this.shareManager = new ShareManager(this.dataManager, this.notificationManager, this.exerciseTypeManager);
 
         // Bind methods to preserve context
         this.handleFormSubmit = this.handleFormSubmit.bind(this);
