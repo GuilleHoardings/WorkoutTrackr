@@ -4,7 +4,7 @@ This document describes the new modular architecture implemented for the Workout
 
 ## Architecture Overview
 
-The application has been refactored from a single monolithic file into a modular structure with clear separation of concerns. Each module handles a specific aspect of the application.
+The application follows a modular structure with clear separation of concerns. Each module handles a specific aspect of the application.
 
 ## Module Structure
 
@@ -35,7 +35,7 @@ The application has been refactored from a single monolithic file into a modular
   - UI state management
 
 #### 4. `ChartManager.js` (Visualization Layer)
-- **Purpose**: Handles all chart creation and updates
+- **Purpose**: Handles all chart creation and updates using Chart.js
 - **Responsibilities**:
   - Chart creation and configuration
   - Chart data preparation and updates
@@ -66,37 +66,42 @@ The application has been refactored from a single monolithic file into a modular
   - File validation
   - Format conversion between CSV versions
 
-## Benefits of the New Architecture
+#### 8. `ExerciseTypeManager.js` (Exercise Management)
+- **Purpose**: Manages exercise types, colors, and exercise-specific configurations
+- **Responsibilities**:
+  - Exercise type storage and retrieval
+  - Default exercise type initialization
+  - Exercise color assignment and management
+  - Custom exercise type creation and management
+  - Exercise visibility and deletion handling
 
-### 1. **Separation of Concerns**
-- Each module has a single, well-defined responsibility
-- Easier to understand and maintain individual components
-- Reduced coupling between different functionalities
+#### 9. `ShareManager.js` (Data Sharing)
+- **Purpose**: Handles sharing workout data via URLs and other mechanisms
+- **Responsibilities**:
+  - URL-based data sharing with compression
+  - Data serialization and deserialization for sharing
+  - Share link generation and validation
+  - Import shared data from URLs
+  - Modal dialogs for sharing interface
 
-### 2. **Improved Error Handling**
-- Centralized error handling in each module
-- Better error reporting and user feedback
-- Graceful degradation when components fail
+#### 10. `activity-tracker.js` (Activity Visualization)
+- **Purpose**: Specialized module for activity calendar visualization
+- **Responsibilities**:
+  - Activity calendar chart generation
+  - Week-based data aggregation
+  - Exercise color coordination
+  - Activity intensity visualization
+  - Date-based activity tracking
 
-### 3. **Enhanced Testability**
-- Each module can be tested independently
-- Clear interfaces make mocking easier
-- Better unit test coverage possible
+### Support Modules
 
-### 4. **Better Code Organization**
-- Logical grouping of related functionality
-- Easier to locate and modify specific features
-- Reduced cognitive load when working on individual features
-
-### 5. **Scalability**
-- Easy to add new features without affecting existing code
-- Modular structure supports future enhancements
-- Clear extension points for new functionality
-
-### 6. **Memory Management**
-- Proper cleanup methods for charts and event listeners
-- Reduced memory leaks
-- Better resource management
+#### 11. `ResponsiveEnhancements.js` (Mobile Optimization)
+- **Purpose**: Provides responsive design enhancements for mobile devices
+- **Responsibilities**:
+  - Chart responsiveness configuration
+  - Mobile-specific UI adaptations
+  - Dynamic layout adjustments
+  - Touch-friendly interface modifications
 
 ## Module Dependencies
 
@@ -105,9 +110,15 @@ WorkoutTrackerApp (Main Controller)
 ├── NotificationManager (no dependencies)
 ├── ValidationManager (depends on NotificationManager)
 ├── WorkoutDataManager (no dependencies)
-├── UIManager (depends on DataManager, NotificationManager)
+├── ExerciseTypeManager (depends on DataManager, NotificationManager)
+├── UIManager (depends on DataManager, NotificationManager, ExerciseTypeManager)
 ├── ChartManager (depends on DataManager, NotificationManager)
-└── CSVManager (depends on DataManager, NotificationManager, ValidationManager)
+├── CSVManager (depends on DataManager, NotificationManager, ValidationManager)
+└── ShareManager (depends on DataManager, NotificationManager, ExerciseTypeManager)
+
+Standalone Modules:
+├── activity-tracker.js (utility functions for activity visualization)
+└── ResponsiveEnhancements.js (mobile responsive enhancements)
 ```
 
 ## File Structure
@@ -116,16 +127,29 @@ WorkoutTrackerApp (Main Controller)
 workout-tracker/
 ├── index.html                     # Main HTML file
 ├── styles.css                     # Application styles
-├── activity-tracker.js            # Activity chart functionality
-├── workouttracker.js             # Legacy monolithic file (kept for reference)
-└── js/                           # New modular JavaScript files
+├── manifest.json                  # PWA manifest
+├── sw.js                          # Service worker for PWA
+├── icons/                         # PWA icons
+│   ├── icon-192x192.png
+│   ├── icon-512x512.png
+│   └── generate-icons.html
+├── tests/                         # Test files
+│   ├── test.html
+│   ├── test.js
+│   ├── module-test.html
+│   └── architecture-demo.html
+└── js/                           # Modular JavaScript files
     ├── WorkoutTrackerApp.js      # Main application controller
     ├── WorkoutDataManager.js     # Data management
     ├── UIManager.js              # UI management
     ├── ChartManager.js           # Chart management
     ├── NotificationManager.js    # User notifications
     ├── ValidationManager.js      # Input validation
-    └── CSVManager.js             # CSV import/export
+    ├── CSVManager.js             # CSV import/export
+    ├── ExerciseTypeManager.js    # Exercise type management
+    ├── ShareManager.js           # Data sharing functionality
+    ├── activity-tracker.js       # Activity calendar utilities
+    └── ResponsiveEnhancements.js # Mobile responsive features
 ```
 
 ## Usage
@@ -136,9 +160,25 @@ The application automatically initializes when the DOM is loaded. The main appli
 
 1. **New Data Operations**: Extend `WorkoutDataManager`
 2. **New UI Components**: Extend `UIManager`
-3. **New Chart Types**: Extend `ChartManager`
+3. **New Chart Types**: Extend `ChartManager` or `activity-tracker.js`
 4. **New Validation Rules**: Extend `ValidationManager`
 5. **New Import/Export Formats**: Extend `CSVManager` or create new manager
+6. **New Exercise Types**: Use `ExerciseTypeManager` methods
+7. **New Sharing Methods**: Extend `ShareManager`
+8. **Mobile Enhancements**: Extend `ResponsiveEnhancements.js`
+
+### Module Loading Order
+
+The modules are loaded in a specific order in `index.html` to ensure dependencies are available:
+
+1. External libraries (Chart.js)
+2. Utility modules (`activity-tracker.js`)
+3. Core foundation modules (`ExerciseTypeManager`, `NotificationManager`, `ValidationManager`)
+4. Data layer (`WorkoutDataManager`)
+5. UI and visualization (`UIManager`, `ChartManager`)
+6. Feature modules (`CSVManager`, `ShareManager`)
+7. Main controller (`WorkoutTrackerApp`)
+8. Enhancement modules (`ResponsiveEnhancements.js`)
 
 ### Example: Adding a New Manager
 
@@ -146,44 +186,38 @@ The application automatically initializes when the DOM is loaded. The main appli
 class NewFeatureManager {
     constructor(dependencies...) {
         // Initialize with required dependencies
+        this.dataManager = dataManager;
+        this.notificationManager = notificationManager;
     }
 
     // Implement feature-specific methods
 }
 
 // Add to WorkoutTrackerApp constructor
-this.newFeatureManager = new NewFeatureManager(...);
+this.newFeatureManager = new NewFeatureManager(this.dataManager, this.notificationManager);
 ```
-
-## Migration from Legacy Code
-
-The original `workouttracker.js` file has been kept for reference but is no longer loaded by the application. All functionality has been migrated to the new modular structure with the following improvements:
-
-- Enhanced error handling throughout
-- Better input validation
-- Improved memory management
-- Cleaner code organization
-- Better user feedback
-
-## Performance Improvements
-
-1. **Reduced Memory Leaks**: Proper cleanup of charts and event listeners
-2. **Better Error Recovery**: Application continues to work even if individual components fail
-3. **Optimized DOM Operations**: Cached DOM elements and efficient updates
-4. **Lazy Loading**: Charts and heavy operations only execute when needed
 
 ## Future Enhancements
 
 The modular architecture supports future enhancements such as:
 
-- Unit testing framework integration
-- TypeScript migration
-- Additional chart types
-- Real-time data synchronization
-- Offline functionality
-- Plugin system for custom exercises
+- Unit testing framework integration (test files already present in `/tests/`)
+- Additional chart types and visualization options
+- Real-time data synchronization across devices
+- Offline functionality with service worker (already implemented)
 - Advanced analytics and reporting
+- Progressive Web App features (already implemented)
+- Additional exercise type customization
+- Social sharing and workout challenges
+- Data backup and cloud storage integration
+- Workout planning and scheduling features
+- Performance analytics and goal tracking
 
-## Backward Compatibility
+## Progressive Web App (PWA) Features
 
-The new modular version maintains full backward compatibility with existing data formats and provides automatic migration from legacy data structures.
+The application includes PWA capabilities:
+
+- Service worker (`sw.js`) for offline functionality
+- Web app manifest (`manifest.json`) for installation
+- Responsive design for mobile devices
+- Optimized icons for different screen sizes
