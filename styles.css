@@ -399,6 +399,35 @@ input[type="file"] {
     display: none;
 }
 
+/* Modal / dynamic dialog buttons (extracted from inline styles) */
+.modal-btn {
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-family: inherit;
+    font-size: 14px;
+    line-height: 1.2;
+    padding: 10px 20px;
+    transition: background-color .2s ease, filter .2s ease;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+.modal-btn-narrow { padding: 10px 15px; }
+.modal-btn-small { padding: 8px 16px; }
+.modal-btn-spaced { margin: 5px; }
+.mr-10 { margin-right: 10px; }
+
+.btn-blue { background:#2196F3; color:#fff; }
+.btn-blue:hover { background:#1976d2; }
+.btn-green { background:#4CAF50; color:#fff; }
+.btn-green:hover { background:#3d9142; }
+.btn-grey { background:#ccc; color:#222; }
+.btn-grey:hover { background:#b5b5b5; }
+
+/* High contrast focus state */
+.modal-btn:focus { outline: 2px solid #111; outline-offset: 2px; }
+
 /* Series list styling */
 .series-list {
     padding-left: 15px;

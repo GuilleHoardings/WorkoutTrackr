@@ -59,7 +59,7 @@ class ShareManager {
     }
 
     // Decompresses a compressed URL-safe string back into the optimized object (simpler contract)
-    decompressString(compressed) {
+    decompressToOptimized(compressed) {
         if (!compressed.startsWith('C1')) throw new Error('Unsupported compressed data');
         let b64 = compressed.slice(2).replace(/-/g,'+').replace(/_/g,'/');
         while (b64.length % 4) b64 += '=';
@@ -203,10 +203,10 @@ class ShareManager {
             </div>
             <p>Choose an alternative sharing method:</p>
             <div style="margin: 20px 0;">
-                <button id="share-recent" style="margin: 5px; padding: 10px 15px; background: #2196F3; color: white; border: none; border-radius: 4px; cursor: pointer;">Share Recent 100 Workouts</button>
-                <button id="share-csv" style="margin: 5px; padding: 10px 15px; background: #4CAF50; color: white; border: none; border-radius: 4px; cursor: pointer;">Download CSV Instead</button>
+                <button id="share-recent" class="modal-btn modal-btn-narrow modal-btn-spaced btn-blue">Share Recent 100 Workouts</button>
+                <button id="share-csv" class="modal-btn modal-btn-narrow modal-btn-spaced btn-green">Download CSV Instead</button>
             </div>
-            <button id="cancel-share" style="background: #ccc; border: none; padding: 10px 20px; border-radius: 4px; cursor: pointer;">Cancel</button>
+            <button id="cancel-share" class="modal-btn btn-grey">Cancel</button>
         `, { maxWidth: '500px' });
 
         dialog.querySelector('#share-recent').addEventListener('click', async () => {
@@ -271,23 +271,18 @@ class ShareManager {
     }
 
     showManualCopyDialog(text) {
-        const { dialog } = this.createModal(`
+        const { dialog, close } = this.createModal(`
             <h3>Copy Share Link</h3>
             <p>Please copy this link manually:</p>
             <textarea readonly style="width: 100%; height: 100px; margin: 10px 0; font-family: monospace; font-size: 12px;">${text}</textarea>
             <div style="text-align:right;">
-                <button id="close-copy-modal" style="background:#2196F3; color:white; border:none; padding:8px 16px; border-radius:4px; cursor:pointer;">Close</button>
+                <button id="close-copy-modal" class="modal-btn modal-btn-small btn-blue">Close</button>
             </div>
         `, { maxWidth: '600px' });
         const textarea = dialog.querySelector('textarea');
         if (textarea) { textarea.focus(); textarea.select(); }
-        dialog.querySelector('#close-copy-modal').addEventListener('click', () => {
-            if (typeof dialog.parentElement?.remove === 'function') {
-                dialog.parentElement.remove();
-            }
-        });
+        dialog.querySelector('#close-copy-modal').addEventListener('click', close);
     }
-    
 
     checkForSharedData() {
         const urlParams = new URLSearchParams(window.location.search);
@@ -304,7 +299,7 @@ class ShareManager {
     async importCompressedData(compressedData) {
         try {
             this.notificationManager.showInfo('Decompressing shared workout data...');
-            const optimizedData = this.decompressString(compressedData);
+            const optimizedData = this.decompressToOptimized(compressedData);
             const shareData = this.restoreDataFromOptimized(optimizedData);
             this.showImportDialog(shareData);
         } catch (error) {
@@ -336,8 +331,8 @@ class ShareManager {
             ${isPartial ? `<p><em>Note: This is a partial dataset (${shareData.originalCount} total workouts)</em></p>` : ''}
             <p><strong>This will replace all your current data!</strong></p>
             <div style="margin-top: 20px;">
-                <button id="confirm-import" style="margin-right: 10px; background: #2196F3; color: white; border: none; padding: 10px 20px; border-radius: 4px; cursor: pointer;">Import Data</button>
-                <button id="cancel-import" style="background: #ccc; border: none; padding: 10px 20px; border-radius: 4px; cursor: pointer;">Cancel</button>
+                <button id="confirm-import" class="modal-btn mr-10 btn-blue">Import Data</button>
+                <button id="cancel-import" class="modal-btn btn-grey">Cancel</button>
             </div>
         `, { maxWidth: '400px', onClose: () => window.history.replaceState({}, document.title, window.location.pathname) });
         dialog.querySelector('#confirm-import').addEventListener('click', () => { this.performImport(shareData); close(); });
