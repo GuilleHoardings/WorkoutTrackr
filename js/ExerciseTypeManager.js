@@ -38,12 +38,10 @@ class ExerciseTypeManager {
             const storedTypes = localStorage.getItem('exerciseTypes');
             if (storedTypes) {
                 this.exerciseTypes = JSON.parse(storedTypes);
-                console.log('Loaded exercise types from storage:', this.exerciseTypes);
             } else {
                 // Use default types if none stored
                 this.exerciseTypes = [...this.defaultExerciseTypes];
                 await this.saveExerciseTypes();
-                console.log('Using default exercise types:', this.exerciseTypes);
             }
         } catch (error) {
             console.error('Error loading exercise types:', error);

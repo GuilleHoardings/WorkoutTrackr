@@ -1,20 +1,10 @@
-const CACHE_NAME = 'workouttrackr-v1';
+const CACHE_NAME = 'workouttrackr-v5';
 const urlsToCache = [
-  './',
-  './index.html',
   './styles.css',
-  './js/activity-tracker.js',
-  './js/ExerciseTypeManager.js',
-  './js/NotificationManager.js',
-  './js/ValidationManager.js',
-  './js/WorkoutDataManager.js',
-  './js/UIManager.js',
-  './js/ChartManager.js',
-  './js/CSVManager.js',
-  './js/WorkoutTrackerApp.js',
-  './js/ResponsiveEnhancements.js',
   './pushup.png',
-  './manifest.json'
+  './manifest.json',
+  './icons/icon-192x192.png',
+  './icons/icon-512x512.png'
 ];
 
 // Install event - cache resources
@@ -29,21 +19,53 @@ self.addEventListener('install', event => {
   );
 });
 
-// Fetch event - serve from cache, fallback to network
+// Fetch event - use network-first for HTML/JS, cache-first for static assets
 self.addEventListener('fetch', event => {
-  event.respondWith(
-    caches.match(event.request)
-      .then(response => {
-        // Return cached version or fetch from network
-        return response || fetch(event.request);
-      })
-      .catch(() => {
-        // If both cache and network fail, could return offline page
-        if (event.request.destination === 'document') {
-          return caches.match('./index.html');
-        }
-      })
-  );
+  const url = new URL(event.request.url);
+  
+  // Always fetch HTML and JavaScript files fresh from network
+  if (event.request.destination === 'document' || 
+      event.request.destination === 'script' ||
+      url.pathname.endsWith('.html') || 
+      url.pathname.endsWith('.js') ||
+      url.pathname === '/') {
+    
+    event.respondWith(
+      fetch(event.request)
+        .then(response => {
+          // Optionally cache successful responses for offline use
+          if (response && response.status === 200) {
+            const responseClone = response.clone();
+            caches.open(CACHE_NAME)
+              .then(cache => {
+                cache.put(event.request, responseClone);
+              });
+          }
+          return response;
+        })
+        .catch(() => {
+          // If network fails, try cache as fallback
+          return caches.match(event.request);
+        })
+    );
+  } else {
+    // For static assets (CSS, images, etc.), use cache-first strategy
+    event.respondWith(
+      caches.match(event.request)
+        .then(response => {
+          return response || fetch(event.request)
+            .then(fetchResponse => {
+              // Cache the fetched response
+              const responseClone = fetchResponse.clone();
+              caches.open(CACHE_NAME)
+                .then(cache => {
+                  cache.put(event.request, responseClone);
+                });
+              return fetchResponse;
+            });
+        })
+    );
+  }
 });
 
 // Activate event - clean up old caches

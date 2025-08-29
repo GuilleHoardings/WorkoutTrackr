@@ -99,6 +99,12 @@ class WorkoutTrackerApp {
             replaceBtn.addEventListener('click', () => replaceInput.click());
             replaceInput.addEventListener('change', this.handleCSVReplace);
         }
+
+        // Share button
+        const shareBtn = document.getElementById('share-data');
+        if (shareBtn) {
+            shareBtn.addEventListener('click', () => this.shareManager.shareData());
+        }
     }
 
     /**

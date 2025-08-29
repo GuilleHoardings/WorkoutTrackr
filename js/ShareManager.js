@@ -4,15 +4,7 @@ class ShareManager {
         this.notificationManager = notificationManager;
         this.exerciseTypeManager = exerciseTypeManager;
         this.maxUrlLength = 8192; // Conservative limit for server compatibility (8KB, 8192 characters)
-        this.initializeShareButton();
         this.checkForSharedData();
-    }
-
-    initializeShareButton() {
-        const shareButton = document.getElementById('share-data');
-        if (shareButton) {
-            shareButton.addEventListener('click', () => this.shareData());
-        }
     }
 
     // ---------- Small Utilities (kept private-ish) ----------
