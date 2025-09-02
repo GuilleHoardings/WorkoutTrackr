@@ -49,95 +49,8 @@ class ChartManager {
             
             const uniqueDates = this.getUniqueDates();
 
-            // Enhanced chart options with better styling
-            const options = {
-                scales: {
-                    y: {
-                        beginAtZero: true,
-                        display: true,
-                        grid: {
-                            color: '#e8e9ed',
-                            lineWidth: 1,
-                            display: true
-                        },
-                        ticks: {
-                            color: '#64748b',
-                            font: {
-                                family: 'Montserrat',
-                                size: 12
-                            },
-                            display: true
-                        },
-                        border: {
-                            display: true,
-                            color: '#d1d5db',
-                            width: 1
-                        }
-                    },
-                    x: {
-                        display: true,
-                        position: 'bottom',
-                        grid: {
-                            color: '#e8e9ed',
-                            lineWidth: 1,
-                            display: true,
-                            drawOnChartArea: true,
-                            drawTicks: true
-                        },
-                        ticks: {
-                            color: '#64748b',
-                            font: {
-                                family: 'Montserrat',
-                                size: 10
-                            },
-                            maxRotation: 35,
-                            minRotation: 0,
-                            display: true,
-                            padding: 8
-                        },
-                        border: {
-                            display: true,
-                            color: '#d1d5db',
-                            width: 2
-                        }
-                    }
-                },
-                responsive: true,
-                maintainAspectRatio: false,
-                layout: {
-                    padding: {
-                        top: 10,
-                        bottom: 50,
-                        left: 15,
-                        right: 15
-                    }
-                },
-                plugins: {
-                    legend: {
-                        labels: {
-                            font: {
-                                family: 'Montserrat',
-                                size: 13
-                            },
-                            color: '#374151',
-                            usePointStyle: true,
-                            pointStyle: 'circle'
-                        }
-                    },
-                    tooltip: {
-                        backgroundColor: 'rgba(0, 0, 0, 0.8)',
-                        titleColor: '#fff',
-                        bodyColor: '#fff',
-                        borderColor: '#e5e7eb',
-                        borderWidth: 1,
-                        cornerRadius: 8,
-                        displayColors: true,
-                        font: {
-                            family: 'Montserrat'
-                        }
-                    }
-                }
-            };
+            // Get base chart options with consistent styling
+            const options = this.getBaseChartOptions();
 
             // Create total reps chart
             this.createTotalRepsChart(exerciseTypes, uniqueDates, options);
@@ -179,15 +92,15 @@ class ChartManager {
         let isStacked;
 
         if (this.totalRepsViewType === 'weekly') {
-            chartData = this.prepareWeeklyRepsData(exerciseTypes);
+            chartData = this.preparePeriodRepsData(exerciseTypes, 'weekly');
             chartTitle = 'Weekly Total Reps by Exercise';
             isStacked = true;
         } else if (this.totalRepsViewType === 'monthly') {
-            chartData = this.prepareMonthlyRepsData(exerciseTypes);
+            chartData = this.preparePeriodRepsData(exerciseTypes, 'monthly');
             chartTitle = 'Monthly Total Reps by Exercise';
             isStacked = true;
         } else if (this.totalRepsViewType === 'yearly') {
-            chartData = this.prepareYearlyRepsData(exerciseTypes);
+            chartData = this.preparePeriodRepsData(exerciseTypes, 'yearly');
             chartTitle = 'Yearly Total Reps by Exercise';
             isStacked = true;
         } else {
@@ -287,10 +200,10 @@ class ChartManager {
         let chartTitle;
 
         if (this.repsPerMinuteViewType === 'weekly') {
-            chartData = this.prepareWeeklyRepsPerMinuteData(exerciseTypes);
+            chartData = this.preparePeriodRepsPerMinuteData(exerciseTypes, 'weekly');
             chartTitle = 'Weekly Average Reps per Minute by Exercise';
         } else if (this.repsPerMinuteViewType === 'monthly') {
-            chartData = this.prepareMonthlyRepsPerMinuteData(exerciseTypes);
+            chartData = this.preparePeriodRepsPerMinuteData(exerciseTypes, 'monthly');
             chartTitle = 'Monthly Average Reps per Minute by Exercise';
         } else {
             chartData = {
@@ -654,11 +567,11 @@ class ChartManager {
             if (totalRepsChart) {
                 let chartData;
                 if (this.totalRepsViewType === 'weekly') {
-                    chartData = this.prepareWeeklyRepsData(exerciseTypes);
+                    chartData = this.preparePeriodRepsData(exerciseTypes, 'weekly');
                 } else if (this.totalRepsViewType === 'monthly') {
-                    chartData = this.prepareMonthlyRepsData(exerciseTypes);
+                    chartData = this.preparePeriodRepsData(exerciseTypes, 'monthly');
                 } else if (this.totalRepsViewType === 'yearly') {
-                    chartData = this.prepareYearlyRepsData(exerciseTypes);
+                    chartData = this.preparePeriodRepsData(exerciseTypes, 'yearly');
                 } else {
                     chartData = {
                         labels: uniqueDates,
@@ -675,9 +588,9 @@ class ChartManager {
             if (repsPerMinuteChart) {
                 let rpmChartData;
                 if (this.repsPerMinuteViewType === 'weekly') {
-                    rpmChartData = this.prepareWeeklyRepsPerMinuteData(exerciseTypes);
+                    rpmChartData = this.preparePeriodRepsPerMinuteData(exerciseTypes, 'weekly');
                 } else if (this.repsPerMinuteViewType === 'monthly') {
-                    rpmChartData = this.prepareMonthlyRepsPerMinuteData(exerciseTypes);
+                    rpmChartData = this.preparePeriodRepsPerMinuteData(exerciseTypes, 'monthly');
                 } else {
                     rpmChartData = {
                         labels: uniqueDates,
@@ -1076,12 +989,7 @@ class ChartManager {
         return undefined; // Use default for daily view
     }
 
-    /**
-     * Prepare monthly reps data for the total reps chart
-     */
-    prepareMonthlyRepsData(exerciseTypes) {
-        return this.preparePeriodRepsData(exerciseTypes, 'monthly');
-    }
+
 
     /**
      * Generic method to prepare reps data for different time periods
@@ -1226,26 +1134,9 @@ class ChartManager {
         return periods;
     }
 
-    /**
-     * Prepare weekly reps data for the total reps chart
-     */
-    prepareWeeklyRepsData(exerciseTypes) {
-        return this.preparePeriodRepsData(exerciseTypes, 'weekly');
-    }
 
-    /**
-     * Prepare weekly reps per minute data for the reps per minute chart
-     */
-    prepareWeeklyRepsPerMinuteData(exerciseTypes) {
-        return this.preparePeriodRepsPerMinuteData(exerciseTypes, 'weekly');
-    }
 
-    /**
-     * Prepare monthly reps per minute data for the reps per minute chart
-     */
-    prepareMonthlyRepsPerMinuteData(exerciseTypes) {
-        return this.preparePeriodRepsPerMinuteData(exerciseTypes, 'monthly');
-    }
+
 
     /**
      * Generic method to prepare reps per minute data for different time periods
@@ -1324,98 +1215,186 @@ class ChartManager {
     }
 
     /**
-     * Set up chart toggle buttons
+     * Generic method to set up toggle buttons for chart views
+     * @param {Object} config - Configuration object for the toggle buttons
      */
-    setupChartToggleButtons() {
-        const dailyBtn = document.getElementById('daily-view-btn');
-        const weeklyBtn = document.getElementById('weekly-view-btn');
-        const monthlyBtn = document.getElementById('monthly-view-btn');
-        const yearlyBtn = document.getElementById('yearly-view-btn');
-
-        if (!dailyBtn || !weeklyBtn || !monthlyBtn || !yearlyBtn) {
-            console.warn("Chart toggle buttons not found");
+    setupToggleButtons(config) {
+        const buttons = config.buttonIds.map(id => document.getElementById(id));
+        
+        if (buttons.some(btn => !btn)) {
+            console.warn(`${config.name} toggle buttons not found`);
             return;
         }
 
-        const handleDailyView = () => {
-            this.switchTotalRepsView('daily');
-            this.setActiveButton(dailyBtn, [weeklyBtn, monthlyBtn, yearlyBtn]);
-        };
-
-        const handleWeeklyView = () => {
-            this.switchTotalRepsView('weekly');
-            this.setActiveButton(weeklyBtn, [dailyBtn, monthlyBtn, yearlyBtn]);
-        };
-
-        const handleMonthlyView = () => {
-            this.switchTotalRepsView('monthly');
-            this.setActiveButton(monthlyBtn, [dailyBtn, weeklyBtn, yearlyBtn]);
-        };
-
-        const handleYearlyView = () => {
-            this.switchTotalRepsView('yearly');
-            this.setActiveButton(yearlyBtn, [dailyBtn, weeklyBtn, monthlyBtn]);
-        };
-
-        dailyBtn.addEventListener('click', handleDailyView);
-        weeklyBtn.addEventListener('click', handleWeeklyView);
-        monthlyBtn.addEventListener('click', handleMonthlyView);
-        yearlyBtn.addEventListener('click', handleYearlyView);
-
-        // Store event listeners for cleanup
-        this.eventListeners.push(
-            { element: dailyBtn, event: 'click', handler: handleDailyView },
-            { element: weeklyBtn, event: 'click', handler: handleWeeklyView },
-            { element: monthlyBtn, event: 'click', handler: handleMonthlyView },
-            { element: yearlyBtn, event: 'click', handler: handleYearlyView }
-        );
+        config.viewTypes.forEach((viewType, index) => {
+            const button = buttons[index];
+            const handler = () => {
+                config.switchFunction.call(this, viewType);
+                this.setActiveButton(button, buttons.filter(b => b !== button));
+            };
+            
+            button.addEventListener('click', handler);
+            this.eventListeners.push({ element: button, event: 'click', handler });
+        });
     }
 
     /**
-     * Prepare yearly reps data for chart
+     * Set up chart toggle buttons
      */
-    prepareYearlyRepsData(exerciseTypes) {
-        return this.preparePeriodRepsData(exerciseTypes, 'yearly');
+    setupChartToggleButtons() {
+        this.setupToggleButtons({
+            name: 'Chart',
+            buttonIds: ['daily-view-btn', 'weekly-view-btn', 'monthly-view-btn', 'yearly-view-btn'],
+            viewTypes: ['daily', 'weekly', 'monthly', 'yearly'],
+            switchFunction: this.switchTotalRepsView
+        });
     }
+
+
 
     /**
      * Set up reps per minute chart toggle buttons
      */
     setupRepsPerMinuteToggleButtons() {
-        const dailyBtn = document.getElementById('rpm-daily-view-btn');
-        const weeklyBtn = document.getElementById('rpm-weekly-view-btn');
-        const monthlyBtn = document.getElementById('rpm-monthly-view-btn');
+        this.setupToggleButtons({
+            name: 'Reps per minute chart',
+            buttonIds: ['rpm-daily-view-btn', 'rpm-weekly-view-btn', 'rpm-monthly-view-btn'],
+            viewTypes: ['daily', 'weekly', 'monthly'],
+            switchFunction: this.switchRepsPerMinuteView
+        });
+    }
 
-        if (!dailyBtn || !weeklyBtn || !monthlyBtn) {
-            console.warn("Reps per minute chart toggle buttons not found");
-            return;
+    /**
+     * Get base chart options for consistent styling across all charts
+     * @returns {Object} Base chart options object
+     */
+    getBaseChartOptions() {
+        return {
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    display: true,
+                    grid: {
+                        color: '#e8e9ed',
+                        lineWidth: 1,
+                        display: true
+                    },
+                    ticks: {
+                        color: '#64748b',
+                        font: {
+                            family: 'Montserrat',
+                            size: 12
+                        },
+                        display: true
+                    },
+                    border: {
+                        display: true,
+                        color: '#d1d5db',
+                        width: 1
+                    }
+                },
+                x: {
+                    display: true,
+                    position: 'bottom',
+                    grid: {
+                        color: '#e8e9ed',
+                        lineWidth: 1,
+                        display: true,
+                        drawOnChartArea: true,
+                        drawTicks: true
+                    },
+                    ticks: {
+                        color: '#64748b',
+                        font: {
+                            family: 'Montserrat',
+                            size: 10
+                        },
+                        maxRotation: 35,
+                        minRotation: 0,
+                        display: true,
+                        padding: 8
+                    },
+                    border: {
+                        display: true,
+                        color: '#d1d5db',
+                        width: 2
+                    }
+                }
+            },
+            responsive: true,
+            maintainAspectRatio: false,
+            layout: {
+                padding: {
+                    top: 10,
+                    bottom: 50,
+                    left: 15,
+                    right: 15
+                }
+            },
+            plugins: {
+                legend: {
+                    labels: {
+                        font: {
+                            family: 'Montserrat',
+                            size: 13
+                        },
+                        color: '#374151',
+                        usePointStyle: true,
+                        pointStyle: 'circle'
+                    }
+                },
+                tooltip: {
+                    backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                    titleColor: '#fff',
+                    bodyColor: '#fff',
+                    borderColor: '#e5e7eb',
+                    borderWidth: 1,
+                    cornerRadius: 8,
+                    displayColors: true,
+                    font: {
+                        family: 'Montserrat'
+                    }
+                }
+            }
+        };
+    }
+
+    /**
+     * Generic method to switch chart views
+     * @param {string} chartKey - Key for the chart in the charts Map
+     * @param {string} viewTypeProperty - Property name for the view type (e.g., 'totalRepsViewType')
+     * @param {string} viewType - New view type to switch to
+     * @param {Function} createChartMethod - Method to recreate the chart
+     */
+    switchChartView(chartKey, viewTypeProperty, viewType, createChartMethod) {
+        if (this[viewTypeProperty] === viewType) return;
+
+        this[viewTypeProperty] = viewType;
+        
+        // Destroy and recreate the chart with new view
+        const chart = this.charts.get(chartKey);
+        if (chart) {
+            chart.destroy();
+            this.charts.delete(chartKey);
         }
 
-        const handleDailyView = () => {
-            this.switchRepsPerMinuteView('daily');
-            this.setActiveButton(dailyBtn, [weeklyBtn, monthlyBtn]);
-        };
+        // Get current data and recreate chart
+        try {
+            let exerciseTypes;
+            if (window.workoutApp && window.workoutApp.exerciseTypeManager) {
+                exerciseTypes = window.workoutApp.exerciseTypeManager.getExerciseTypes();
+            } else {
+                exerciseTypes = this.dataManager.getUniqueExerciseTypes();
+            }
+            
+            const uniqueDates = this.getUniqueDates();
+            const options = this.getBaseChartOptions();
 
-        const handleWeeklyView = () => {
-            this.switchRepsPerMinuteView('weekly');
-            this.setActiveButton(weeklyBtn, [dailyBtn, monthlyBtn]);
-        };
-
-        const handleMonthlyView = () => {
-            this.switchRepsPerMinuteView('monthly');
-            this.setActiveButton(monthlyBtn, [dailyBtn, weeklyBtn]);
-        };
-
-        dailyBtn.addEventListener('click', handleDailyView);
-        weeklyBtn.addEventListener('click', handleWeeklyView);
-        monthlyBtn.addEventListener('click', handleMonthlyView);
-
-        // Store event listeners for cleanup
-        this.eventListeners.push(
-            { element: dailyBtn, event: 'click', handler: handleDailyView },
-            { element: weeklyBtn, event: 'click', handler: handleWeeklyView },
-            { element: monthlyBtn, event: 'click', handler: handleMonthlyView }
-        );
+            createChartMethod.call(this, exerciseTypes, uniqueDates, options);
+        } catch (error) {
+            console.error("Error switching chart view:", error);
+            this.notificationManager.showError("Failed to switch chart view.");
+        }
     }
 
     /**
@@ -1427,249 +1406,17 @@ class ChartManager {
     }
 
     /**
-     * Switch total reps chart view between daily and weekly
+     * Switch total reps chart view between daily, weekly, monthly, and yearly
      */
     switchTotalRepsView(viewType) {
-        if (this.totalRepsViewType === viewType) return;
-
-        this.totalRepsViewType = viewType;
-        
-        // Destroy and recreate the chart with new view
-        const totalRepsChart = this.charts.get('totalReps');
-        if (totalRepsChart) {
-            totalRepsChart.destroy();
-            this.charts.delete('totalReps');
-        }
-
-        // Get current data and recreate chart
-        try {
-            let exerciseTypes;
-            if (window.workoutApp && window.workoutApp.exerciseTypeManager) {
-                exerciseTypes = window.workoutApp.exerciseTypeManager.getExerciseTypes();
-            } else {
-                exerciseTypes = this.dataManager.getUniqueExerciseTypes();
-            }
-            
-            const uniqueDates = this.getUniqueDates();
-
-            // Enhanced chart options with better styling
-            const options = {
-                scales: {
-                    y: {
-                        beginAtZero: true,
-                        display: true,
-                        grid: {
-                            color: '#e8e9ed',
-                            lineWidth: 1,
-                            display: true
-                        },
-                        ticks: {
-                            color: '#64748b',
-                            font: {
-                                family: 'Montserrat',
-                                size: 12
-                            },
-                            display: true
-                        },
-                        border: {
-                            display: true,
-                            color: '#d1d5db',
-                            width: 1
-                        }
-                    },
-                    x: {
-                        display: true,
-                        position: 'bottom',
-                        grid: {
-                            color: '#e8e9ed',
-                            lineWidth: 1,
-                            display: true,
-                            drawOnChartArea: true,
-                            drawTicks: true
-                        },
-                        ticks: {
-                            color: '#64748b',
-                            font: {
-                                family: 'Montserrat',
-                                size: 10
-                            },
-                            maxRotation: 35,
-                            minRotation: 0,
-                            display: true,
-                            padding: 8
-                        },
-                        border: {
-                            display: true,
-                            color: '#d1d5db',
-                            width: 2
-                        }
-                    }
-                },
-                responsive: true,
-                maintainAspectRatio: false,
-                layout: {
-                    padding: {
-                        top: 10,
-                        bottom: 50,
-                        left: 15,
-                        right: 15
-                    }
-                },
-                plugins: {
-                    legend: {
-                        labels: {
-                            font: {
-                                family: 'Montserrat',
-                                size: 13
-                            },
-                            color: '#374151',
-                            usePointStyle: true,
-                            pointStyle: 'circle'
-                        }
-                    },
-                    tooltip: {
-                        backgroundColor: 'rgba(0, 0, 0, 0.8)',
-                        titleColor: '#fff',
-                        bodyColor: '#fff',
-                        borderColor: '#e5e7eb',
-                        borderWidth: 1,
-                        cornerRadius: 8,
-                        displayColors: true,
-                        font: {
-                            family: 'Montserrat'
-                        }
-                    }
-                }
-            };
-
-            this.createTotalRepsChart(exerciseTypes, uniqueDates, options);
-        } catch (error) {
-            console.error("Error switching chart view:", error);
-            this.notificationManager.showError("Failed to switch chart view.");
-        }
+        this.switchChartView('totalReps', 'totalRepsViewType', viewType, this.createTotalRepsChart);
     }
 
     /**
      * Switch reps per minute chart view between daily, weekly, and monthly
      */
     switchRepsPerMinuteView(viewType) {
-        if (this.repsPerMinuteViewType === viewType) return;
-
-        this.repsPerMinuteViewType = viewType;
-        
-        // Destroy and recreate the chart with new view
-        const repsPerMinuteChart = this.charts.get('repsPerMinute');
-        if (repsPerMinuteChart) {
-            repsPerMinuteChart.destroy();
-            this.charts.delete('repsPerMinute');
-        }
-
-        // Get current data and recreate chart
-        try {
-            let exerciseTypes;
-            if (window.workoutApp && window.workoutApp.exerciseTypeManager) {
-                exerciseTypes = window.workoutApp.exerciseTypeManager.getExerciseTypes();
-            } else {
-                exerciseTypes = this.dataManager.getUniqueExerciseTypes();
-            }
-            
-            const uniqueDates = this.getUniqueDates();
-
-            // Enhanced chart options with better styling
-            const options = {
-                scales: {
-                    y: {
-                        beginAtZero: true,
-                        display: true,
-                        grid: {
-                            color: '#e8e9ed',
-                            lineWidth: 1,
-                            display: true
-                        },
-                        ticks: {
-                            color: '#64748b',
-                            font: {
-                                family: 'Montserrat',
-                                size: 12
-                            },
-                            display: true
-                        },
-                        border: {
-                            display: true,
-                            color: '#d1d5db',
-                            width: 1
-                        }
-                    },
-                    x: {
-                        display: true,
-                        position: 'bottom',
-                        grid: {
-                            color: '#e8e9ed',
-                            lineWidth: 1,
-                            display: true,
-                            drawOnChartArea: true,
-                            drawTicks: true
-                        },
-                        ticks: {
-                            color: '#64748b',
-                            font: {
-                                family: 'Montserrat',
-                                size: 10
-                            },
-                            maxRotation: 35,
-                            minRotation: 0,
-                            display: true,
-                            padding: 8
-                        },
-                        border: {
-                            display: true,
-                            color: '#d1d5db',
-                            width: 2
-                        }
-                    }
-                },
-                responsive: true,
-                maintainAspectRatio: false,
-                layout: {
-                    padding: {
-                        top: 10,
-                        bottom: 50,
-                        left: 15,
-                        right: 15
-                    }
-                },
-                plugins: {
-                    legend: {
-                        labels: {
-                            font: {
-                                family: 'Montserrat',
-                                size: 13
-                            },
-                            color: '#374151',
-                            usePointStyle: true,
-                            pointStyle: 'circle'
-                        }
-                    },
-                    tooltip: {
-                        backgroundColor: 'rgba(0, 0, 0, 0.8)',
-                        titleColor: '#fff',
-                        bodyColor: '#fff',
-                        borderColor: '#e5e7eb',
-                        borderWidth: 1,
-                        cornerRadius: 8,
-                        displayColors: true,
-                        font: {
-                            family: 'Montserrat'
-                        }
-                    }
-                }
-            };
-
-            this.createRepsPerMinuteChart(exerciseTypes, uniqueDates, options);
-        } catch (error) {
-            console.error("Error switching reps per minute chart view:", error);
-            this.notificationManager.showError("Failed to switch reps per minute chart view.");
-        }
+        this.switchChartView('repsPerMinute', 'repsPerMinuteViewType', viewType, this.createRepsPerMinuteChart);
     }
 
     /**
