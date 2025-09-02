@@ -1080,313 +1080,218 @@ class ChartManager {
      * Prepare monthly reps data for the total reps chart
      */
     prepareMonthlyRepsData(exerciseTypes) {
+        return this.preparePeriodRepsData(exerciseTypes, 'monthly');
+    }
+
+    /**
+     * Generic method to prepare reps data for different time periods
+     * @param {Array} exerciseTypes - Array of exercise types
+     * @param {string} period - Time period: 'daily', 'weekly', 'monthly', or 'yearly'
+     * @returns {Object} Chart data with labels and datasets
+     */
+    preparePeriodRepsData(exerciseTypes, period) {
         const workouts = this.dataManager.getAllWorkouts();
-        const monthlyData = {};
+        const periodData = {};
 
         if (workouts.length === 0) {
             return { labels: [], datasets: [] };
         }
 
-        // Group workouts by month and exercise type
+        // Group workouts by period and exercise type
         workouts.forEach(workout => {
             const date = new Date(workout.date);
-            const year = date.getFullYear();
-            const month = date.getMonth() + 1;
-            const monthKey = `${year}-${month}`;
+            const periodKey = this.getPeriodKey(date, period);
 
-            if (!monthlyData[monthKey]) {
-                monthlyData[monthKey] = {};
+            if (!periodData[periodKey]) {
+                periodData[periodKey] = {};
             }
 
-            if (!monthlyData[monthKey][workout.exercise]) {
-                monthlyData[monthKey][workout.exercise] = 0;
+            if (!periodData[periodKey][workout.exercise]) {
+                periodData[periodKey][workout.exercise] = 0;
             }
 
-            monthlyData[monthKey][workout.exercise] += workout.totalReps;
+            periodData[periodKey][workout.exercise] += workout.totalReps;
         });
 
-        // Find the date range from first to last workout
-        const workoutDates = workouts.map(w => new Date(w.date)).sort((a, b) => a - b);
-        const firstDate = workoutDates[0];
-        const lastDate = workoutDates[workoutDates.length - 1];
-
-        // Generate all months between first and last workout date
-        const allMonths = [];
-        const currentDate = new Date(firstDate.getFullYear(), firstDate.getMonth(), 1);
-        const endDate = new Date(lastDate.getFullYear(), lastDate.getMonth(), 1);
-
-        while (currentDate <= endDate) {
-            const year = currentDate.getFullYear();
-            const month = currentDate.getMonth() + 1;
-            allMonths.push(`${year}-${month}`);
-            currentDate.setMonth(currentDate.getMonth() + 1);
-        }
-
-        // Show all months from beginning to end (no limit)
-        const monthsToShow = allMonths;
+        // Generate all periods in the range
+        const allPeriods = this.generatePeriodRange(workouts, period);
 
         // Create datasets for each exercise type
         const datasets = exerciseTypes.map((exerciseType, index) => {
-            const data = monthsToShow.map(month => monthlyData[month] && monthlyData[month][exerciseType] || 0);
+            const data = allPeriods.map(period => periodData[period] && periodData[period][exerciseType] || 0);
             const baseColor = this.getExerciseBaseColor(exerciseType, index);
             const validColor = this.convertToValidColor(baseColor);
 
-            return {
+            // Use consistent styling for weekly/monthly, special handling for yearly
+            const datasetConfig = {
                 label: exerciseType,
                 data: data,
-                backgroundColor: this.adjustColorOpacity(validColor, 0.8),
-                borderColor: validColor,
                 borderWidth: 1,
-                borderRadius: 2,
-                borderSkipped: false,
-                stack: 'stack1'
+                stack: period === 'yearly' ? 'year' : 'stack1'
             };
+
+            if (period === 'yearly') {
+                datasetConfig.backgroundColor = this.generateColorScale(exerciseTypes.length)[index];
+            } else {
+                datasetConfig.backgroundColor = this.adjustColorOpacity(validColor, 0.8);
+                datasetConfig.borderColor = validColor;
+                datasetConfig.borderRadius = 2;
+                datasetConfig.borderSkipped = false;
+            }
+
+            return datasetConfig;
         });
 
         return {
-            labels: monthsToShow,
+            labels: allPeriods,
             datasets: datasets
         };
+    }
+
+    /**
+     * Generate a period key for a given date and period type
+     * @param {Date} date - The date to generate a key for
+     * @param {string} period - The period type: 'daily', 'weekly', 'monthly', or 'yearly'
+     * @returns {string} The period key
+     */
+    getPeriodKey(date, period) {
+        const year = date.getFullYear();
+        
+        switch (period) {
+            case 'daily':
+                const month = (date.getMonth() + 1).toString().padStart(2, '0');
+                const day = date.getDate().toString().padStart(2, '0');
+                return `${year}-${month}-${day}`;
+            case 'weekly':
+                const week = this.getWeekNumber(date);
+                return `${year}-W${week.toString().padStart(2, '0')}`;
+            case 'monthly':
+                return `${year}-${date.getMonth() + 1}`;
+            case 'yearly':
+                return year.toString();
+            default:
+                throw new Error(`Unsupported period type: ${period}. Supported types are: daily, weekly, monthly, yearly`);
+        }
+    }
+
+    /**
+     * Generate a range of periods from first to last workout
+     * @param {Array} workouts - Array of workout data
+     * @param {string} period - The period type: 'daily', 'weekly', 'monthly', or 'yearly'
+     * @returns {Array} Array of period keys
+     */
+    generatePeriodRange(workouts, period) {
+        const workoutDates = workouts.map(w => new Date(w.date)).sort((a, b) => a - b);
+        const firstDate = workoutDates[0];
+        const lastDate = workoutDates[workoutDates.length - 1];
+        const periods = [];
+
+        switch (period) {
+            case 'daily':
+                const currentDay = new Date(firstDate);
+                while (currentDay <= lastDate) {
+                    periods.push(this.getPeriodKey(currentDay, period));
+                    currentDay.setDate(currentDay.getDate() + 1);
+                }
+                break;
+            case 'weekly':
+                // Start from the Monday of the first workout's week
+                const firstMonday = new Date(firstDate);
+                firstMonday.setDate(firstDate.getDate() - (firstDate.getDay() || 7) + 1);
+                const currentWeekStart = new Date(firstMonday);
+                while (currentWeekStart <= lastDate) {
+                    periods.push(this.getPeriodKey(currentWeekStart, period));
+                    currentWeekStart.setDate(currentWeekStart.getDate() + 7);
+                }
+                break;
+            case 'monthly':
+                const currentMonth = new Date(firstDate.getFullYear(), firstDate.getMonth(), 1);
+                const endDate = new Date(lastDate.getFullYear(), lastDate.getMonth(), 1);
+                while (currentMonth <= endDate) {
+                    periods.push(this.getPeriodKey(currentMonth, period));
+                    currentMonth.setMonth(currentMonth.getMonth() + 1);
+                }
+                break;
+            case 'yearly':
+                const firstYear = firstDate.getFullYear();
+                const lastYear = lastDate.getFullYear();
+                for (let year = firstYear; year <= lastYear; year++) {
+                    periods.push(year.toString());
+                }
+                break;
+            default:
+                throw new Error(`Unsupported period type: ${period}`);
+        }
+
+        return periods;
     }
 
     /**
      * Prepare weekly reps data for the total reps chart
      */
     prepareWeeklyRepsData(exerciseTypes) {
-        const workouts = this.dataManager.getAllWorkouts();
-        const weeklyData = {};
-
-        if (workouts.length === 0) {
-            return { labels: [], datasets: [] };
-        }
-
-        // Group workouts by week and exercise type
-        workouts.forEach(workout => {
-            const date = new Date(workout.date);
-            const year = date.getFullYear();
-            const week = this.getWeekNumber(date);
-            const weekKey = `${year}-W${week.toString().padStart(2, '0')}`;
-
-            if (!weeklyData[weekKey]) {
-                weeklyData[weekKey] = {};
-            }
-
-            if (!weeklyData[weekKey][workout.exercise]) {
-                weeklyData[weekKey][workout.exercise] = 0;
-            }
-
-            weeklyData[weekKey][workout.exercise] += workout.totalReps;
-        });
-
-        // Find the date range from first to last workout
-        const workoutDates = workouts.map(w => new Date(w.date)).sort((a, b) => a - b);
-        const firstDate = workoutDates[0];
-        const lastDate = workoutDates[workoutDates.length - 1];
-
-        // Generate all weeks between first and last workout date
-        const allWeeks = [];
-        const currentDate = new Date(firstDate);
-        
-        // Start from the Monday of the first workout's week
-        const firstMonday = new Date(currentDate);
-        firstMonday.setDate(currentDate.getDate() - (currentDate.getDay() || 7) + 1);
-        
-        const endDate = new Date(lastDate);
-        const currentWeekStart = new Date(firstMonday);
-
-        while (currentWeekStart <= endDate) {
-            const year = currentWeekStart.getFullYear();
-            const week = this.getWeekNumber(currentWeekStart);
-            allWeeks.push(`${year}-W${week.toString().padStart(2, '0')}`);
-            currentWeekStart.setDate(currentWeekStart.getDate() + 7);
-        }
-
-        // Show all weeks from beginning to end (no limit)
-        const weeksToShow = allWeeks;
-
-        // Create datasets for each exercise type
-        const datasets = exerciseTypes.map((exerciseType, index) => {
-            const data = weeksToShow.map(week => weeklyData[week] && weeklyData[week][exerciseType] || 0);
-            const baseColor = this.getExerciseBaseColor(exerciseType, index);
-            const validColor = this.convertToValidColor(baseColor);
-
-            return {
-                label: exerciseType,
-                data: data,
-                backgroundColor: this.adjustColorOpacity(validColor, 0.8),
-                borderColor: validColor,
-                borderWidth: 1,
-                borderRadius: 2,
-                borderSkipped: false,
-                stack: 'stack1'
-            };
-        });
-
-        return {
-            labels: weeksToShow,
-            datasets: datasets
-        };
+        return this.preparePeriodRepsData(exerciseTypes, 'weekly');
     }
 
     /**
      * Prepare weekly reps per minute data for the reps per minute chart
      */
     prepareWeeklyRepsPerMinuteData(exerciseTypes) {
-        const workouts = this.dataManager.getAllWorkouts();
-        const weeklyData = {};
-
-        if (workouts.length === 0) {
-            return { labels: [], datasets: [] };
-        }
-
-        // Group workouts by week and exercise type, calculating average reps per minute
-        workouts.forEach(workout => {
-            const date = new Date(workout.date);
-            const year = date.getFullYear();
-            const week = this.getWeekNumber(date);
-            const weekKey = `${year}-W${week.toString().padStart(2, '0')}`;
-
-            if (!weeklyData[weekKey]) {
-                weeklyData[weekKey] = {};
-            }
-
-            if (!weeklyData[weekKey][workout.exercise]) {
-                weeklyData[weekKey][workout.exercise] = {
-                    totalReps: 0,
-                    totalTime: 0,
-                    workoutCount: 0
-                };
-            }
-
-            weeklyData[weekKey][workout.exercise].totalReps += workout.totalReps;
-            weeklyData[weekKey][workout.exercise].totalTime += workout.totalTime || 1;
-            weeklyData[weekKey][workout.exercise].workoutCount += 1;
-        });
-
-        // Find the date range from first to last workout
-        const workoutDates = workouts.map(w => new Date(w.date)).sort((a, b) => a - b);
-        const firstDate = workoutDates[0];
-        const lastDate = workoutDates[workoutDates.length - 1];
-
-        // Generate all weeks between first and last workout date
-        const allWeeks = [];
-        const currentDate = new Date(firstDate);
-        
-        // Start from the Monday of the first workout's week
-        const firstMonday = new Date(currentDate);
-        firstMonday.setDate(currentDate.getDate() - (currentDate.getDay() || 7) + 1);
-        
-        const endDate = new Date(lastDate);
-        const currentWeekStart = new Date(firstMonday);
-
-        while (currentWeekStart <= endDate) {
-            const year = currentWeekStart.getFullYear();
-            const week = this.getWeekNumber(currentWeekStart);
-            allWeeks.push(`${year}-W${week.toString().padStart(2, '0')}`);
-            currentWeekStart.setDate(currentWeekStart.getDate() + 7);
-        }
-
-        // Show all weeks from beginning to end (no limit)
-        const weeksToShow = allWeeks;
-
-        // Create datasets for each exercise type
-        const datasets = exerciseTypes.map((exerciseType, index) => {
-            const data = weeksToShow.map(week => {
-                if (weeklyData[week] && weeklyData[week][exerciseType]) {
-                    const weekData = weeklyData[week][exerciseType];
-                    return weekData.totalTime > 0 ? weekData.totalReps / weekData.totalTime : 0;
-                }
-                return 0;
-            });
-            const baseColor = this.getExerciseBaseColor(exerciseType, index);
-            const validColor = this.convertToValidColor(baseColor);
-
-            return {
-                label: exerciseType,
-                data: data,
-                borderColor: validColor,
-                backgroundColor: this.adjustColorOpacity(validColor, 0.1),
-                borderWidth: 3,
-                tension: 0.2,
-                pointBackgroundColor: '#fff',
-                pointBorderColor: validColor,
-                pointBorderWidth: 2,
-                pointRadius: 4,
-                pointHoverRadius: 6,
-                pointHoverBackgroundColor: validColor,
-                pointHoverBorderColor: '#fff',
-                pointHoverBorderWidth: 2,
-                fill: true
-            };
-        });
-
-        return {
-            labels: weeksToShow,
-            datasets: datasets
-        };
+        return this.preparePeriodRepsPerMinuteData(exerciseTypes, 'weekly');
     }
 
     /**
      * Prepare monthly reps per minute data for the reps per minute chart
      */
     prepareMonthlyRepsPerMinuteData(exerciseTypes) {
+        return this.preparePeriodRepsPerMinuteData(exerciseTypes, 'monthly');
+    }
+
+    /**
+     * Generic method to prepare reps per minute data for different time periods
+     * @param {Array} exerciseTypes - Array of exercise types
+     * @param {string} period - Time period: 'daily', 'weekly', or 'monthly'
+     * @returns {Object} Chart data with labels and datasets
+     */
+    preparePeriodRepsPerMinuteData(exerciseTypes, period) {
         const workouts = this.dataManager.getAllWorkouts();
-        const monthlyData = {};
+        const periodData = {};
 
         if (workouts.length === 0) {
             return { labels: [], datasets: [] };
         }
 
-        // Group workouts by month and exercise type, calculating average reps per minute
+        // Group workouts by period and exercise type, calculating average reps per minute
         workouts.forEach(workout => {
             const date = new Date(workout.date);
-            const year = date.getFullYear();
-            const month = date.getMonth() + 1;
-            const monthKey = `${year}-${month}`;
+            const periodKey = this.getPeriodKey(date, period);
 
-            if (!monthlyData[monthKey]) {
-                monthlyData[monthKey] = {};
+            if (!periodData[periodKey]) {
+                periodData[periodKey] = {};
             }
 
-            if (!monthlyData[monthKey][workout.exercise]) {
-                monthlyData[monthKey][workout.exercise] = {
+            if (!periodData[periodKey][workout.exercise]) {
+                periodData[periodKey][workout.exercise] = {
                     totalReps: 0,
                     totalTime: 0,
                     workoutCount: 0
                 };
             }
 
-            monthlyData[monthKey][workout.exercise].totalReps += workout.totalReps;
-            monthlyData[monthKey][workout.exercise].totalTime += workout.totalTime || 1;
-            monthlyData[monthKey][workout.exercise].workoutCount += 1;
+            periodData[periodKey][workout.exercise].totalReps += workout.totalReps;
+            periodData[periodKey][workout.exercise].totalTime += workout.totalTime || 1;
+            periodData[periodKey][workout.exercise].workoutCount += 1;
         });
 
-        // Find the date range from first to last workout
-        const workoutDates = workouts.map(w => new Date(w.date)).sort((a, b) => a - b);
-        const firstDate = workoutDates[0];
-        const lastDate = workoutDates[workoutDates.length - 1];
-
-        // Generate all months between first and last workout date
-        const allMonths = [];
-        const currentDate = new Date(firstDate.getFullYear(), firstDate.getMonth(), 1);
-        const endDate = new Date(lastDate.getFullYear(), lastDate.getMonth(), 1);
-
-        while (currentDate <= endDate) {
-            const year = currentDate.getFullYear();
-            const month = currentDate.getMonth() + 1;
-            allMonths.push(`${year}-${month}`);
-            currentDate.setMonth(currentDate.getMonth() + 1);
-        }
-
-        // Show all months from beginning to end (no limit)
-        const monthsToShow = allMonths;
+        // Generate all periods in the range
+        const allPeriods = this.generatePeriodRange(workouts, period);
 
         // Create datasets for each exercise type
         const datasets = exerciseTypes.map((exerciseType, index) => {
-            const data = monthsToShow.map(month => {
-                if (monthlyData[month] && monthlyData[month][exerciseType]) {
-                    const monthData = monthlyData[month][exerciseType];
-                    return monthData.totalTime > 0 ? monthData.totalReps / monthData.totalTime : 0;
+            const data = allPeriods.map(period => {
+                if (periodData[period] && periodData[period][exerciseType]) {
+                    const periodStats = periodData[period][exerciseType];
+                    return periodStats.totalTime > 0 ? periodStats.totalReps / periodStats.totalTime : 0;
                 }
                 return 0;
             });
@@ -1413,7 +1318,7 @@ class ChartManager {
         });
 
         return {
-            labels: monthsToShow,
+            labels: allPeriods,
             datasets: datasets
         };
     }
@@ -1470,34 +1375,7 @@ class ChartManager {
      * Prepare yearly reps data for chart
      */
     prepareYearlyRepsData(exerciseTypes) {
-        const workouts = this.dataManager.getAllWorkouts();
-        const yearlyTotals = {};
-        // Aggregate reps by year and exercise
-        workouts.forEach(workout => {
-            const date = new Date(workout.date);
-            const year = date.getFullYear();
-            if (!yearlyTotals[year]) yearlyTotals[year] = {};
-            exerciseTypes.forEach(type => {
-                if (!yearlyTotals[year][type]) yearlyTotals[year][type] = 0;
-            });
-            if (yearlyTotals[year][workout.exercise] !== undefined) {
-                yearlyTotals[year][workout.exercise] += workout.totalReps;
-            }
-        });
-        // Prepare chart labels and datasets
-        const years = Object.keys(yearlyTotals).sort();
-        const datasets = exerciseTypes.map((type, idx) => {
-            return {
-                label: type,
-                data: years.map(year => yearlyTotals[year][type] || 0),
-                backgroundColor: this.generateColorScale(exerciseTypes.length)[idx],
-                stack: 'year',
-            };
-        });
-        return {
-            labels: years,
-            datasets: datasets
-        };
+        return this.preparePeriodRepsData(exerciseTypes, 'yearly');
     }
 
     /**
