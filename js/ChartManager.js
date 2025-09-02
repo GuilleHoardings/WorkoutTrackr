@@ -49,27 +49,18 @@ class ChartManager {
             
             const uniqueDates = this.getUniqueDates();
 
-            // Get base chart options with consistent styling
             const options = this.getBaseChartOptions();
 
-            // Create total reps chart
             this.createTotalRepsChart(exerciseTypes, uniqueDates, options);
 
             // Set up chart view toggle buttons
             this.setupChartToggleButtons();
             this.setupRepsPerMinuteToggleButtons();
 
-            // Create reps per minute chart
             this.createRepsPerMinuteChart(exerciseTypes, uniqueDates, options);
-
-            // Create monthly chart
             this.createMonthlyChart();
-
-            // Create activity chart
-            this.createActivityChart();
-
-            // Create weekly summary chart
             this.createWeeklySummaryChart();
+            this.createActivityChart();
 
         } catch (error) {
             console.error("Error creating charts:", error);
