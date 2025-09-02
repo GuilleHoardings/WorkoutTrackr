@@ -7,7 +7,7 @@ class ChartManager {
         this.notificationManager = notificationManager;
         this.charts = new Map();
         this.eventListeners = [];
-        this.totalRepsViewType = 'weekly'; // 'daily', 'weekly', or 'monthly'
+        this.totalRepsViewType = 'weekly'; // 'daily', 'weekly', 'monthly', or 'yearly'
         this.repsPerMinuteViewType = 'weekly'; // 'daily', 'weekly', or 'monthly'
     }
 
@@ -186,6 +186,10 @@ class ChartManager {
             chartData = this.prepareMonthlyRepsData(exerciseTypes);
             chartTitle = 'Monthly Total Reps by Exercise';
             isStacked = true;
+        } else if (this.totalRepsViewType === 'yearly') {
+            chartData = this.prepareYearlyRepsData(exerciseTypes);
+            chartTitle = 'Yearly Total Reps by Exercise';
+            isStacked = true;
         } else {
             chartData = {
                 labels: uniqueDates,
@@ -215,13 +219,16 @@ class ChartManager {
                     },
                     tooltip: {
                         ...options.plugins.tooltip,
-                        callbacks: (this.totalRepsViewType === 'weekly' || this.totalRepsViewType === 'monthly') ? {
+                        callbacks: (this.totalRepsViewType === 'weekly' || this.totalRepsViewType === 'monthly' || this.totalRepsViewType === 'yearly') ? {
                             afterBody: function(context) {
                                 let total = 0;
                                 context.forEach(item => {
                                     total += item.parsed.y;
                                 });
-                                const period = this.totalRepsViewType === 'weekly' ? 'week' : 'month';
+                                let period = 'period';
+                                if (this.totalRepsViewType === 'weekly') period = 'week';
+                                else if (this.totalRepsViewType === 'monthly') period = 'month';
+                                else if (this.totalRepsViewType === 'yearly') period = 'year';
                                 return `Total for ${period}: ${total} reps`;
                             }.bind(this)
                         } : undefined
@@ -650,6 +657,8 @@ class ChartManager {
                     chartData = this.prepareWeeklyRepsData(exerciseTypes);
                 } else if (this.totalRepsViewType === 'monthly') {
                     chartData = this.prepareMonthlyRepsData(exerciseTypes);
+                } else if (this.totalRepsViewType === 'yearly') {
+                    chartData = this.prepareYearlyRepsData(exerciseTypes);
                 } else {
                     chartData = {
                         labels: uniqueDates,
@@ -1416,37 +1425,79 @@ class ChartManager {
         const dailyBtn = document.getElementById('daily-view-btn');
         const weeklyBtn = document.getElementById('weekly-view-btn');
         const monthlyBtn = document.getElementById('monthly-view-btn');
+        const yearlyBtn = document.getElementById('yearly-view-btn');
 
-        if (!dailyBtn || !weeklyBtn || !monthlyBtn) {
+        if (!dailyBtn || !weeklyBtn || !monthlyBtn || !yearlyBtn) {
             console.warn("Chart toggle buttons not found");
             return;
         }
 
         const handleDailyView = () => {
             this.switchTotalRepsView('daily');
-            this.setActiveButton(dailyBtn, [weeklyBtn, monthlyBtn]);
+            this.setActiveButton(dailyBtn, [weeklyBtn, monthlyBtn, yearlyBtn]);
         };
 
         const handleWeeklyView = () => {
             this.switchTotalRepsView('weekly');
-            this.setActiveButton(weeklyBtn, [dailyBtn, monthlyBtn]);
+            this.setActiveButton(weeklyBtn, [dailyBtn, monthlyBtn, yearlyBtn]);
         };
 
         const handleMonthlyView = () => {
             this.switchTotalRepsView('monthly');
-            this.setActiveButton(monthlyBtn, [dailyBtn, weeklyBtn]);
+            this.setActiveButton(monthlyBtn, [dailyBtn, weeklyBtn, yearlyBtn]);
+        };
+
+        const handleYearlyView = () => {
+            this.switchTotalRepsView('yearly');
+            this.setActiveButton(yearlyBtn, [dailyBtn, weeklyBtn, monthlyBtn]);
         };
 
         dailyBtn.addEventListener('click', handleDailyView);
         weeklyBtn.addEventListener('click', handleWeeklyView);
         monthlyBtn.addEventListener('click', handleMonthlyView);
+        yearlyBtn.addEventListener('click', handleYearlyView);
 
         // Store event listeners for cleanup
         this.eventListeners.push(
             { element: dailyBtn, event: 'click', handler: handleDailyView },
             { element: weeklyBtn, event: 'click', handler: handleWeeklyView },
-            { element: monthlyBtn, event: 'click', handler: handleMonthlyView }
+            { element: monthlyBtn, event: 'click', handler: handleMonthlyView },
+            { element: yearlyBtn, event: 'click', handler: handleYearlyView }
         );
+    }
+
+    /**
+     * Prepare yearly reps data for chart
+     */
+    prepareYearlyRepsData(exerciseTypes) {
+        const workouts = this.dataManager.getAllWorkouts();
+        const yearlyTotals = {};
+        // Aggregate reps by year and exercise
+        workouts.forEach(workout => {
+            const date = new Date(workout.date);
+            const year = date.getFullYear();
+            if (!yearlyTotals[year]) yearlyTotals[year] = {};
+            exerciseTypes.forEach(type => {
+                if (!yearlyTotals[year][type]) yearlyTotals[year][type] = 0;
+            });
+            if (yearlyTotals[year][workout.exercise] !== undefined) {
+                yearlyTotals[year][workout.exercise] += workout.totalReps;
+            }
+        });
+        // Prepare chart labels and datasets
+        const years = Object.keys(yearlyTotals).sort();
+        const datasets = exerciseTypes.map((type, idx) => {
+            return {
+                label: type,
+                data: years.map(year => yearlyTotals[year][type] || 0),
+                backgroundColor: this.generateColorScale(exerciseTypes.length)[idx],
+                stack: 'year',
+            };
+        });
+        return {
+            labels: years,
+            datasets: datasets
+        };
     }
 
     /**
