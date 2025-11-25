@@ -327,7 +327,7 @@ class ChartManager {
                                 const [year, month] = label.split('-');
                                 const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
                                     'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-                                const monthName = monthNames[parseInt(month) - 1];
+                                const monthName = monthNames[parseInt(month, 10) - 1];
 
                                 if (index === 0 || (monthlyChartData.labels[index - 1] &&
                                     monthlyChartData.labels[index - 1].split('-')[0] !== year)) {
@@ -394,7 +394,7 @@ class ChartManager {
                                 const [year, month] = label.split('-');
                                 const monthNames = ['January', 'February', 'March', 'April', 'May', 'June',
                                     'July', 'August', 'September', 'October', 'November', 'December'];
-                                return `${monthNames[parseInt(month) - 1]} ${year}`;
+                                return `${monthNames[parseInt(month, 10) - 1]} ${year}`;
                             },
                             label: function (context) {
                                 return `Total Reps: ${context.parsed.y}`;
@@ -508,6 +508,20 @@ class ChartManager {
                         },
                         ticks: {
                             color: '#64748b',
+                            font: {
+                                family: 'Montserrat',
+                                size: 12
+                            }
+                        }
+                    },
+                    y1: {
+                        beginAtZero: true,
+                        position: 'right',
+                        grid: {
+                            drawOnChartArea: false
+                        },
+                        ticks: {
+                            color: '#10B981',
                             font: {
                                 family: 'Montserrat',
                                 size: 12
@@ -841,29 +855,33 @@ class ChartManager {
             const monthLimit = (year === currentYear) ? currentMonth : 12;
 
             for (let month = 1; month <= monthLimit; month++) {
-                allMonths.push(`${year}-${month}`);
+                allMonths.push(this.createMonthKey(year, month));
             }
-        }        // Sort the months chronologically
-        allMonths.sort((a, b) => {
-            const [yearA, monthA] = a.split('-').map(Number);
-            const [yearB, monthB] = b.split('-').map(Number);
-            return yearA - yearB || monthA - monthB;
-        });
+        }
+
+        const monthKeyToIndex = allMonths.reduce((acc, key, index) => {
+            acc[key] = index;
+            return acc;
+        }, {});
 
         const monthlyDatasets = years.map((year, index) => {
             const yearData = new Array(allMonths.length).fill(null);
-            monthlyData.filter(d => d.year === year).forEach(d => {
-                const monthIndex = allMonths.indexOf(`${d.year}-${d.month}`);
-                if (monthIndex !== -1) {
-                    yearData[monthIndex] = d.reps;
-                }
-            });
+            monthlyData
+                .filter(d => d.year === year)
+                .forEach(d => {
+                    const monthKey = this.createMonthKey(d.year, d.month);
+                    const monthIndex = monthKeyToIndex[monthKey];
+                    if (typeof monthIndex === 'number') {
+                        yearData[monthIndex] = d.reps;
+                    }
+                });
 
+            const color = yearColorScale[index % yearColorScale.length];
             return {
                 label: year.toString(),
                 data: yearData,
-                backgroundColor: yearColorScale[index % yearColorScale.length],
-                borderColor: yearColorScale[index % yearColorScale.length],
+                backgroundColor: color,
+                borderColor: color,
                 borderWidth: 1,
             };
         });
@@ -944,11 +962,25 @@ class ChartManager {
                 const [year, month] = label.split('-');
                 const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
                     'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-                const monthName = monthNames[parseInt(month) - 1];
+                const monthName = monthNames[parseInt(month, 10) - 1];
                 return `${monthName}\n${year}`;
             };
+        } else if (this.totalRepsViewType === 'daily') {
+            return function(val) {
+                const label = this.getLabelForValue(val);
+                if (!label) return '';
+
+                const parts = label.split('-');
+                if (parts.length !== 3) return label;
+
+                const [year, month, day] = parts;
+                const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+                    'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+                const monthName = monthNames[parseInt(month, 10) - 1];
+                return `${monthName} ${parseInt(day, 10)}`;
+            };
         }
-        return undefined; // Use default for daily view
+        return undefined; // Use Chart.js defaults for other views
     }
 
     /**
@@ -973,11 +1005,25 @@ class ChartManager {
                 const [year, month] = label.split('-');
                 const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
                     'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-                const monthName = monthNames[parseInt(month) - 1];
+                const monthName = monthNames[parseInt(month, 10) - 1];
                 return `${monthName}\n${year}`;
             };
+        } else if (this.repsPerMinuteViewType === 'daily') {
+            return function(val) {
+                const label = this.getLabelForValue(val);
+                if (!label) return '';
+
+                const parts = label.split('-');
+                if (parts.length !== 3) return label;
+
+                const [year, month, day] = parts;
+                const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+                    'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+                const monthName = monthNames[parseInt(month, 10) - 1];
+                return `${monthName} ${parseInt(day, 10)}`;
+            };
         }
-        return undefined; // Use default for daily view
+        return undefined; // Use Chart.js defaults for other views
     }
 
 
@@ -1065,7 +1111,7 @@ class ChartManager {
                 const week = this.getWeekNumber(date);
                 return `${year}-W${week.toString().padStart(2, '0')}`;
             case 'monthly':
-                return `${year}-${date.getMonth() + 1}`;
+                return this.createMonthKey(year, date.getMonth() + 1);
             case 'yearly':
                 return year.toString();
             default:
@@ -1533,7 +1579,19 @@ class ChartManager {
      * Create short formatted date
      */
     createShortFormattedDate(date) {
-        return new Intl.DateTimeFormat().format(date);
+        const year = date.getFullYear();
+        const month = (date.getMonth() + 1).toString().padStart(2, '0');
+        const day = date.getDate().toString().padStart(2, '0');
+        return `${year}-${month}-${day}`;
+    }
+
+    /**
+     * Create a consistent YYYY-MM key for monthly aggregations
+     */
+    createMonthKey(year, month) {
+        const monthNumber = parseInt(month, 10);
+        const safeMonth = isNaN(monthNumber) ? 1 : Math.min(Math.max(monthNumber, 1), 12);
+        return `${year}-${safeMonth.toString().padStart(2, '0')}`;
     }
 
     /**
@@ -1547,7 +1605,7 @@ class ChartManager {
             const date = new Date(workout.date);
             const year = date.getFullYear();
             const month = date.getMonth() + 1;
-            const key = `${year}-${month}`;
+            const key = this.createMonthKey(year, month);
 
             if (!monthlyData[key]) {
                 monthlyData[key] = {
