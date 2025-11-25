@@ -984,6 +984,13 @@ class ChartManager {
                 const monthName = monthNames[parseInt(month, 10) - 1];
                 return `${monthName}\n${year}`;
             };
+        } else if (this.totalRepsViewType === 'yearly') {
+            return function(val) {
+                const label = this.getLabelForValue(val);
+                if (!label) return '';
+                // Label is already a year string (e.g., "2024"), return as-is
+                return label;
+            };
         } else if (this.totalRepsViewType === 'daily') {
             return function(val) {
                 const label = this.getLabelForValue(val);
