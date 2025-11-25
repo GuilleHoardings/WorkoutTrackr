@@ -83,24 +83,53 @@ class ChartManager {
         let isStacked;
 
         if (this.totalRepsViewType === 'weekly') {
-            chartData = this.preparePeriodRepsData(exerciseTypes, 'weekly');
+            chartData = ChartDataUtils.preparePeriodRepsData(
+                this.dataManager.getAllWorkouts(),
+                exerciseTypes,
+                'weekly',
+                this.getExerciseBaseColor.bind(this),
+                this.convertToValidColor.bind(this),
+                this.adjustColorOpacity.bind(this),
+                this.generateColorScale.bind(this)
+            );
             chartTitle = 'Weekly Total Reps by Exercise';
             isStacked = true;
         } else if (this.totalRepsViewType === 'monthly') {
-            chartData = this.preparePeriodRepsData(exerciseTypes, 'monthly');
+            chartData = ChartDataUtils.preparePeriodRepsData(
+                this.dataManager.getAllWorkouts(),
+                exerciseTypes,
+                'monthly',
+                this.getExerciseBaseColor.bind(this),
+                this.convertToValidColor.bind(this),
+                this.adjustColorOpacity.bind(this),
+                this.generateColorScale.bind(this)
+            );
             chartTitle = 'Monthly Total Reps by Exercise';
             isStacked = true;
         } else if (this.totalRepsViewType === 'yearly') {
-            chartData = this.preparePeriodRepsData(exerciseTypes, 'yearly');
+            chartData = ChartDataUtils.preparePeriodRepsData(
+                this.dataManager.getAllWorkouts(),
+                exerciseTypes,
+                'yearly',
+                this.getExerciseBaseColor.bind(this),
+                this.convertToValidColor.bind(this),
+                this.adjustColorOpacity.bind(this),
+                this.generateColorScale.bind(this)
+            );
             chartTitle = 'Yearly Total Reps by Exercise';
             isStacked = true;
         } else {
-            chartData = {
-                labels: uniqueDates,
-                datasets: this.createChartDatasets(exerciseTypes, uniqueDates, false)
-            };
+            chartData = ChartDataUtils.preparePeriodRepsData(
+                this.dataManager.getAllWorkouts(),
+                exerciseTypes,
+                'daily',
+                this.getExerciseBaseColor.bind(this),
+                this.convertToValidColor.bind(this),
+                this.adjustColorOpacity.bind(this),
+                this.generateColorScale.bind(this)
+            );
             chartTitle = 'Daily Total Reps by Exercise';
-            isStacked = false;
+            isStacked = true;
         }
 
         const chart = new Chart(canvasChartTotal, {
@@ -191,10 +220,24 @@ class ChartManager {
         let chartTitle;
 
         if (this.repsPerMinuteViewType === 'weekly') {
-            chartData = this.preparePeriodRepsPerMinuteData(exerciseTypes, 'weekly');
+            chartData = ChartDataUtils.preparePeriodRepsPerMinuteData(
+                this.dataManager.getAllWorkouts(),
+                exerciseTypes,
+                'weekly',
+                this.getExerciseBaseColor.bind(this),
+                this.convertToValidColor.bind(this),
+                this.adjustColorOpacity.bind(this)
+            );
             chartTitle = 'Weekly Average Reps per Minute by Exercise';
         } else if (this.repsPerMinuteViewType === 'monthly') {
-            chartData = this.preparePeriodRepsPerMinuteData(exerciseTypes, 'monthly');
+            chartData = ChartDataUtils.preparePeriodRepsPerMinuteData(
+                this.dataManager.getAllWorkouts(),
+                exerciseTypes,
+                'monthly',
+                this.getExerciseBaseColor.bind(this),
+                this.convertToValidColor.bind(this),
+                this.adjustColorOpacity.bind(this)
+            );
             chartTitle = 'Monthly Average Reps per Minute by Exercise';
         } else {
             chartData = {
@@ -572,16 +615,45 @@ class ChartManager {
             if (totalRepsChart) {
                 let chartData;
                 if (this.totalRepsViewType === 'weekly') {
-                    chartData = this.preparePeriodRepsData(exerciseTypes, 'weekly');
+                    chartData = ChartDataUtils.preparePeriodRepsData(
+                        this.dataManager.getAllWorkouts(),
+                        exerciseTypes,
+                        'weekly',
+                        this.getExerciseBaseColor.bind(this),
+                        this.convertToValidColor.bind(this),
+                        this.adjustColorOpacity.bind(this),
+                        this.generateColorScale.bind(this)
+                    );
                 } else if (this.totalRepsViewType === 'monthly') {
-                    chartData = this.preparePeriodRepsData(exerciseTypes, 'monthly');
+                    chartData = ChartDataUtils.preparePeriodRepsData(
+                        this.dataManager.getAllWorkouts(),
+                        exerciseTypes,
+                        'monthly',
+                        this.getExerciseBaseColor.bind(this),
+                        this.convertToValidColor.bind(this),
+                        this.adjustColorOpacity.bind(this),
+                        this.generateColorScale.bind(this)
+                    );
                 } else if (this.totalRepsViewType === 'yearly') {
-                    chartData = this.preparePeriodRepsData(exerciseTypes, 'yearly');
+                    chartData = ChartDataUtils.preparePeriodRepsData(
+                        this.dataManager.getAllWorkouts(),
+                        exerciseTypes,
+                        'yearly',
+                        this.getExerciseBaseColor.bind(this),
+                        this.convertToValidColor.bind(this),
+                        this.adjustColorOpacity.bind(this),
+                        this.generateColorScale.bind(this)
+                    );
                 } else {
-                    chartData = {
-                        labels: uniqueDates,
-                        datasets: this.createChartDatasets(exerciseTypes, uniqueDates, false)
-                    };
+                    chartData = ChartDataUtils.preparePeriodRepsData(
+                        this.dataManager.getAllWorkouts(),
+                        exerciseTypes,
+                        'daily',
+                        this.getExerciseBaseColor.bind(this),
+                        this.convertToValidColor.bind(this),
+                        this.adjustColorOpacity.bind(this),
+                        this.generateColorScale.bind(this)
+                    );
                 }
                 totalRepsChart.data.labels = chartData.labels;
                 totalRepsChart.data.datasets = chartData.datasets;
@@ -593,9 +665,23 @@ class ChartManager {
             if (repsPerMinuteChart) {
                 let rpmChartData;
                 if (this.repsPerMinuteViewType === 'weekly') {
-                    rpmChartData = this.preparePeriodRepsPerMinuteData(exerciseTypes, 'weekly');
+                    rpmChartData = ChartDataUtils.preparePeriodRepsPerMinuteData(
+                        this.dataManager.getAllWorkouts(),
+                        exerciseTypes,
+                        'weekly',
+                        this.getExerciseBaseColor.bind(this),
+                        this.convertToValidColor.bind(this),
+                        this.adjustColorOpacity.bind(this)
+                    );
                 } else if (this.repsPerMinuteViewType === 'monthly') {
-                    rpmChartData = this.preparePeriodRepsPerMinuteData(exerciseTypes, 'monthly');
+                    rpmChartData = ChartDataUtils.preparePeriodRepsPerMinuteData(
+                        this.dataManager.getAllWorkouts(),
+                        exerciseTypes,
+                        'monthly',
+                        this.getExerciseBaseColor.bind(this),
+                        this.convertToValidColor.bind(this),
+                        this.adjustColorOpacity.bind(this)
+                    );
                 } else {
                     rpmChartData = {
                         labels: uniqueDates,
@@ -647,7 +733,7 @@ class ChartManager {
             // Create mapping of dates to aggregated values for this exercise
             const dateToValue = {};
             exerciseData.forEach(workout => {
-                const formattedDate = this.createShortFormattedDate(new Date(workout.date));
+                const formattedDate = ChartDataUtils.createShortFormattedDate(new Date(workout.date));
 
                 if (!dateToValue[formattedDate]) {
                     dateToValue[formattedDate] = isRepsPerMinute
@@ -848,7 +934,7 @@ class ChartManager {
      * Prepare monthly chart data
      */
     prepareMonthlyChartData() {
-        const monthlyData = this.aggregateDataByMonth();
+        const monthlyData = ChartDataUtils.aggregateDataByMonth(this.dataManager.getAllWorkouts());
         const years = [...new Set(monthlyData.map(d => d.year))];
         const yearColorScale = this.generateColorScale(years.length);
 
@@ -874,7 +960,7 @@ class ChartManager {
             const monthLimit = (year === currentYear) ? currentMonth : 12;
 
             for (let month = 1; month <= monthLimit; month++) {
-                allMonths.push(this.createMonthKey(year, month));
+                allMonths.push(ChartDataUtils.createMonthKey(year, month));
             }
         }
 
@@ -888,7 +974,7 @@ class ChartManager {
             monthlyData
                 .filter(d => d.year === year)
                 .forEach(d => {
-                    const monthKey = this.createMonthKey(d.year, d.month);
+                    const monthKey = ChartDataUtils.createMonthKey(d.year, d.month);
                     const monthIndex = monthKeyToIndex[monthKey];
                     if (typeof monthIndex === 'number') {
                         yearData[monthIndex] = d.reps;
@@ -1486,68 +1572,7 @@ class ChartManager {
      * Prepare weekly chart data
      */
     prepareWeeklyChartData() {
-        const workouts = this.dataManager.getAllWorkouts();
-        const weeklyData = {};
-
-        workouts.forEach(workout => {
-            const date = new Date(workout.date);
-            const year = date.getFullYear();
-            const week = this.getWeekNumber(date);
-            const key = `${year}-W${week.toString().padStart(2, '0')}`;
-
-            if (!weeklyData[key]) {
-                weeklyData[key] = {
-                    week: key,
-                    totalReps: 0,
-                    workoutDays: new Set(),
-                    exercises: new Set()
-                };
-            }
-
-            weeklyData[key].totalReps += workout.totalReps;
-            weeklyData[key].workoutDays.add(workout.dateString);
-            weeklyData[key].exercises.add(workout.exercise);
-        });
-
-        // Convert to arrays and sort
-        const sortedWeeks = Object.values(weeklyData)
-            .sort((a, b) => a.week.localeCompare(b.week))
-            .slice(-53); // Last 53 weeks
-
-        const labels = sortedWeeks.map(w => w.week);
-        const totalRepsData = sortedWeeks.map(w => w.totalReps);
-        const workoutDaysData = sortedWeeks.map(w => w.workoutDays.size);
-
-        return {
-            labels: labels,
-            datasets: [
-                {
-                    label: 'Total Reps',
-                    data: totalRepsData,
-                    borderColor: '#3B82F6',
-                    backgroundColor: 'rgba(59, 130, 246, 0.1)',
-                    yAxisID: 'y'
-                },
-                {
-                    label: 'Workout Days',
-                    data: workoutDaysData,
-                    borderColor: '#10B981',
-                    backgroundColor: 'rgba(16, 185, 129, 0.1)',
-                    yAxisID: 'y1'
-                }
-            ]
-        };
-    }
-
-    /**
-     * Get week number for a date
-     */
-    getWeekNumber(date) {
-        const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
-        const dayNum = d.getUTCDay() || 7;
-        d.setUTCDate(d.getUTCDate() + 4 - dayNum);
-        const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
-        return Math.ceil((((d - yearStart) / 86400000) + 1) / 7);
+        return ChartDataUtils.prepareWeeklyChartData(this.dataManager.getAllWorkouts());
     }
 
     /**
@@ -1560,94 +1585,7 @@ class ChartManager {
             return [];
         }
 
-        // For daily view, show all days between first and last workout to maintain consistency
-        // with weekly/monthly views that show complete time frames
-        return this.getAllDatesBetweenWorkouts();
-    }
-
-    /**
-     * Get all dates between first and last workout (for comprehensive view)
-     */
-    getAllDatesBetweenWorkouts() {
-        const workouts = this.dataManager.getAllWorkouts();
-        
-        if (workouts.length === 0) {
-            return [];
-        }
-
-        // Find first and last workout dates
-        const workoutDates = workouts.map(w => new Date(w.date)).sort((a, b) => a - b);
-        const firstDate = workoutDates[0];
-        const lastDate = workoutDates[workoutDates.length - 1];
-
-        // For daily view, limit to last 90 days to keep it manageable
-        const today = new Date();
-        const ninetyDaysAgo = new Date(today);
-        ninetyDaysAgo.setDate(today.getDate() - 90);
-        
-        // Use the later of either first workout date or 90 days ago
-        const startDate = new Date(Math.max(firstDate.getTime(), ninetyDaysAgo.getTime()));
-        const endDate = new Date(Math.min(lastDate.getTime(), today.getTime()));
-
-        // Generate all dates between start and end
-        const allDates = [];
-        const currentDate = new Date(startDate);
-        
-        while (currentDate <= endDate) {
-            allDates.push(this.createShortFormattedDate(new Date(currentDate)));
-            currentDate.setDate(currentDate.getDate() + 1);
-        }
-
-        return allDates;
-    }
-
-    /**
-     * Create short formatted date
-     */
-    createShortFormattedDate(date) {
-        const year = date.getFullYear();
-        const month = (date.getMonth() + 1).toString().padStart(2, '0');
-        const day = date.getDate().toString().padStart(2, '0');
-        return `${year}-${month}-${day}`;
-    }
-
-    /**
-     * Create a consistent YYYY-MM key for monthly aggregations
-     */
-    createMonthKey(year, month) {
-        const monthNumber = parseInt(month, 10);
-        const safeMonth = isNaN(monthNumber) ? 1 : Math.min(Math.max(monthNumber, 1), 12);
-        return `${year}-${safeMonth.toString().padStart(2, '0')}`;
-    }
-
-    /**
-     * Aggregate data by month
-     */
-    aggregateDataByMonth() {
-        const workouts = this.dataManager.getAllWorkouts();
-        const monthlyData = {};
-
-        workouts.forEach(workout => {
-            const date = new Date(workout.date);
-            const year = date.getFullYear();
-            const month = date.getMonth() + 1;
-            const key = this.createMonthKey(year, month);
-
-            if (!monthlyData[key]) {
-                monthlyData[key] = {
-                    year: year,
-                    month: month,
-                    reps: 0
-                };
-            }
-
-            monthlyData[key].reps += workout.totalReps;
-        });
-
-        // Sort by year and month
-        return Object.values(monthlyData).sort((a, b) => {
-            return a.year - b.year || a.month - b.month;
-        });
+        return ChartDataUtils.getAllDatesBetweenWorkouts(workouts, 365);
     }
 
     /**
