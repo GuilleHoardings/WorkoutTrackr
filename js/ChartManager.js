@@ -88,12 +88,12 @@ class ChartManager {
             exerciseTypes,
             period,
             this.getExerciseBaseColor.bind(this),
-            this.convertToValidColor.bind(this),
-            this.adjustColorOpacity.bind(this),
+            ColorUtils.convertToValidColor,
+            ColorUtils.adjustColorOpacity,
             this.generateColorScale.bind(this)
         );
 
-        const chart = new Chart(canvasChartTotal, {
+        const chart = this.createChart(canvasChartTotal, 'bar', chartData, {
             type: "bar",
             data: chartData,
             options: {
@@ -187,11 +187,11 @@ class ChartManager {
                 exerciseTypes,
                 period,
                 this.getExerciseBaseColor.bind(this),
-                this.convertToValidColor.bind(this),
-                this.adjustColorOpacity.bind(this)
+                ColorUtils.convertToValidColor,
+                ColorUtils.adjustColorOpacity
             );
 
-        const chart = new Chart(canvasChartRepsPerMinute, {
+        const chart = this.createChart(canvasChartRepsPerMinute, 'line', chartData, {
             type: "line",
             data: chartData,
             options: {
@@ -284,7 +284,7 @@ class ChartManager {
             return;
         }
 
-        const chart = new Chart(canvasChartRepsPerMonth, {
+        const chart = this.createChart(canvasChartRepsPerMonth, 'bar', monthlyChartData, {
             type: "bar",
             data: monthlyChartData,
             options: {
@@ -426,7 +426,7 @@ class ChartManager {
             return;
         }
 
-        const chart = new Chart(canvas, {
+        const chart = this.createChart(canvas, 'line', weeklyData, {
             type: 'line',
             data: weeklyData,
             options: {
@@ -550,8 +550,8 @@ class ChartManager {
                     exerciseTypes,
                     this.totalRepsViewType,
                     this.getExerciseBaseColor.bind(this),
-                    this.convertToValidColor.bind(this),
-                    this.adjustColorOpacity.bind(this),
+                    ColorUtils.convertToValidColor,
+                    ColorUtils.adjustColorOpacity,
                     this.generateColorScale.bind(this)
                 )
             );
@@ -565,8 +565,8 @@ class ChartManager {
                         exerciseTypes,
                         this.repsPerMinuteViewType,
                         this.getExerciseBaseColor.bind(this),
-                        this.convertToValidColor.bind(this),
-                        this.adjustColorOpacity.bind(this)
+                        ColorUtils.convertToValidColor,
+                        ColorUtils.adjustColorOpacity
                     )
             );
 
@@ -596,6 +596,17 @@ class ChartManager {
             chart.data.datasets = chartData.datasets;
             chart.update();
         }
+    }
+
+    /**
+     * Small helper to create and configure a Chart instance to reduce duplication
+     */
+    createChart(canvas, defaultType, data, config) {
+        // Ensure the config object is present and merge dataset and type
+        const cfg = config || {};
+        cfg.type = cfg.type || defaultType;
+        cfg.data = data;
+        return new Chart(canvas, cfg);
     }
 
     /**
@@ -679,8 +690,8 @@ class ChartManager {
                     const gradient = ctx.createLinearGradient(0, 0, 0, 400);
 
                     // Convert color to valid format for gradients
-                    const validColor = this.convertToValidColor(baseColor);
-                    const validOpacityColor = this.adjustColorOpacity(validColor, 0.6);
+                    const validColor = ColorUtils.convertToValidColor(baseColor);
+                    const validOpacityColor = ColorUtils.adjustColorOpacity(validColor, 0.6);
 
                     gradient.addColorStop(0, validColor);
                     gradient.addColorStop(1, validOpacityColor);
@@ -693,17 +704,17 @@ class ChartManager {
                         borderWidth: 2,
                         borderRadius: 4,
                         borderSkipped: false,
-                        hoverBackgroundColor: this.adjustColorOpacity(validColor, 0.8),
+                        hoverBackgroundColor: ColorUtils.adjustColorOpacity(validColor, 0.8),
                         hoverBorderColor: validColor,
                         hoverBorderWidth: 3
                     });
                 } else {
                     // Fallback without gradient
-                    const validColor = this.convertToValidColor(baseColor);
+                    const validColor = ColorUtils.convertToValidColor(baseColor);
                     datasets.push({
                         label: exerciseType,
                         data: valueData,
-                        backgroundColor: this.adjustColorOpacity(validColor, 0.7),
+                        backgroundColor: ColorUtils.adjustColorOpacity(validColor, 0.7),
                         borderColor: validColor,
                         borderWidth: 2,
                         borderRadius: 4
@@ -716,34 +727,7 @@ class ChartManager {
     }    /**
      * Adjust color opacity
      */
-    adjustColorOpacity(color, opacity) {
-        // Convert hex to rgba
-        if (color.startsWith('#')) {
-            const hex = color.replace('#', '');
-            const r = parseInt(hex.substr(0, 2), 16);
-            const g = parseInt(hex.substr(2, 2), 16);
-            const b = parseInt(hex.substr(4, 2), 16);
-            return `rgba(${r}, ${g}, ${b}, ${opacity})`;
-        }
-        // Handle existing rgba
-        else if (color.startsWith('rgba')) {
-            return color.replace(/[\d\.]+\)$/, `${opacity})`);
-        }
-        // Handle rgb
-        else if (color.startsWith('rgb')) {
-            return color.replace('rgb', 'rgba').replace(')', `, ${opacity})`);
-        }
-        // Handle hsla
-        else if (color.startsWith('hsla')) {
-            return color.replace(/[\d\.]+\)$/, `${opacity})`);
-        }
-        // Handle hsl - convert to hsla
-        else if (color.startsWith('hsl')) {
-            return color.replace('hsl', 'hsla').replace(')', `, ${opacity})`);
-        }
-        // Fallback - return original color
-        return color;
-    }
+    // NOTE: color utilities are provided by js/ColorUtils.js - use ColorUtils.convertToValidColor/adjustColorOpacity
     /**
      * Get a consistent base color for an exercise type across all charts.
      * Priority:
@@ -775,45 +759,8 @@ class ChartManager {
      * Convert any color to a valid hex color for gradients
      */
     convertToValidColor(color) {
-        // If it's already a hex color, return as is
-        if (color.startsWith('#')) {
-            return color;
-        }
-
-        // For HSL colors, convert to RGB first then to hex
-        if (color.startsWith('hsl')) {
-            // Create a temporary element to use browser's color parsing
-            const temp = document.createElement('div');
-            temp.style.color = color;
-            document.body.appendChild(temp);
-            const computedColor = window.getComputedStyle(temp).color;
-            document.body.removeChild(temp);
-
-            // Convert rgb to hex
-            if (computedColor.startsWith('rgb')) {
-                const matches = computedColor.match(/\d+/g);
-                if (matches && matches.length >= 3) {
-                    const r = parseInt(matches[0]);
-                    const g = parseInt(matches[1]);
-                    const b = parseInt(matches[2]);
-                    return `#${r.toString(16).padStart(2, '0')}${g.toString(16).padStart(2, '0')}${b.toString(16).padStart(2, '0')}`;
-                }
-            }
-        }
-
-        // For RGB colors, convert to hex
-        if (color.startsWith('rgb')) {
-            const matches = color.match(/\d+/g);
-            if (matches && matches.length >= 3) {
-                const r = parseInt(matches[0]);
-                const g = parseInt(matches[1]);
-                const b = parseInt(matches[2]);
-                return `#${r.toString(16).padStart(2, '0')}${g.toString(16).padStart(2, '0')}${b.toString(16).padStart(2, '0')}`;
-            }
-        }
-
-        // Fallback to a default color
-        return '#3B82F6';
+    // Note: kept for backward compatibility - delegate to ColorUtils
+        return ColorUtils.convertToValidColor(color);
     }
 
     /**
@@ -932,9 +879,9 @@ class ChartManager {
     }
 
     /**
-     * Get X-axis tick callback based on current view type
+     * Get X-axis tick callback based on provided view type (or default to totalRepsViewType)
      */
-    getXAxisTickCallback() {
+    getXAxisTickCallback(viewType = this.totalRepsViewType) {
         const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
         
         const formatters = {
@@ -955,7 +902,7 @@ class ChartManager {
             }
         };
 
-        const formatter = formatters[this.totalRepsViewType];
+        const formatter = formatters[viewType];
         return formatter ? function(val) {
             const label = this.getLabelForValue(val);
             return label ? formatter(label) : '';
@@ -966,12 +913,7 @@ class ChartManager {
      * Get X-axis tick callback based on current view type for reps per minute chart
      */
     getRepsPerMinuteXAxisTickCallback() {
-        // Reuse the same logic as total reps, just with different view type property
-        const currentView = this.totalRepsViewType;
-        this.totalRepsViewType = this.repsPerMinuteViewType;
-        const callback = this.getXAxisTickCallback();
-        this.totalRepsViewType = currentView;
-        return callback;
+        return this.getXAxisTickCallback(this.repsPerMinuteViewType);
     }
 
 
