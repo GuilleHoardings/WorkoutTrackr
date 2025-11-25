@@ -93,70 +93,39 @@ class ChartManager {
             this.generateColorScale.bind(this)
         );
 
-        const chart = this.createChart(canvasChartTotal, 'bar', chartData, {
-            type: "bar",
-            data: chartData,
-            options: {
-                ...options,
-                plugins: {
-                    ...options.plugins,
-                    title: {
-                        display: true,
-                        text: chartTitle,
-                        font: {
-                            family: 'Montserrat',
-                            size: 16,
-                            weight: 'bold'
-                        },
-                        color: '#374151',
-                        padding: 20
-                    },
-                    tooltip: {
-                        ...options.plugins.tooltip,
-                        callbacks: this.totalRepsViewType !== 'daily' ? {
-                            afterBody: (context) => {
-                                const total = context.reduce((sum, item) => sum + item.parsed.y, 0);
-                                const periodName = { weekly: 'week', monthly: 'month', yearly: 'year' }[this.totalRepsViewType] || 'period';
-                                return `Total for ${periodName}: ${total} reps`;
-                            }
-                        } : undefined
-                    }
+        const mergedOptions = this.getChartOptions(chartTitle, {
+            plugins: {
+                title: {
+                    font: { family: 'Montserrat', size: 16, weight: 'bold' },
+                    color: '#374151',
+                    padding: 20
                 },
-                animation: {
-                    duration: 1500,
-                    easing: 'easeInOutQuart'
-                },
-                interaction: {
-                    intersect: false,
-                    mode: 'index'
-                },
-                scales: {
-                    ...options.scales,
-                    x: {
-                        ...options.scales.x,
-                        stacked: isStacked,
-                        ticks: {
-                            ...options.scales.x.ticks,
-                            callback: this.getXAxisTickCallback()
+                tooltip: {
+                    ...options.plugins.tooltip,
+                    callbacks: this.totalRepsViewType !== 'daily' ? {
+                        afterBody: (context) => {
+                            const total = context.reduce((sum, item) => sum + item.parsed.y, 0);
+                            const periodName = { weekly: 'week', monthly: 'month', yearly: 'year' }[this.totalRepsViewType] || 'period';
+                            return `Total for ${periodName}: ${total} reps`;
                         }
-                    },
-                    y: {
-                        ...options.scales.y,
-                        stacked: isStacked,
-                        title: {
-                            display: true,
-                            text: 'Total Reps',
-                            font: {
-                                family: 'Montserrat',
-                                size: 13,
-                                weight: 'bold'
-                            },
-                            color: '#64748b'
-                        }
-                    }
+                    } : undefined
+                }
+            },
+            animation: { duration: 1500, easing: 'easeInOutQuart' },
+            interaction: { intersect: false, mode: 'index' },
+            scales: {
+                x: {
+                    stacked: isStacked,
+                    ticks: { callback: this.getXAxisTickCallback() }
+                },
+                y: {
+                    stacked: isStacked,
+                    title: { display: true, text: 'Total Reps', font: { family: 'Montserrat', size: 13, weight: 'bold' }, color: '#64748b' }
                 }
             }
         });
+
+        const chart = this.createChart(canvasChartTotal, 'bar', chartData, { options: mergedOptions });
 
         this.charts.set('totalReps', chart);
     }
@@ -191,83 +160,33 @@ class ChartManager {
                 ColorUtils.adjustColorOpacity
             );
 
-        const chart = this.createChart(canvasChartRepsPerMinute, 'line', chartData, {
-            type: "line",
-            data: chartData,
-            options: {
-                ...options,
-                plugins: {
-                    ...options.plugins,
-                    title: {
-                        display: true,
-                        text: chartTitle,
-                        font: {
-                            family: 'Montserrat',
-                            size: 16,
-                            weight: 'bold'
-                        },
-                        color: '#374151',
-                        padding: 20
-                    },
-                    tooltip: {
-                        ...options.plugins.tooltip,
-                        callbacks: this.repsPerMinuteViewType !== 'daily' ? {
-                            afterBody: (context) => {
-                                const values = context.filter(item => item.parsed.y > 0);
-                                const avgRpm = values.length > 0 
-                                    ? (values.reduce((sum, item) => sum + item.parsed.y, 0) / values.length).toFixed(2)
-                                    : 0;
-                                const periodName = this.repsPerMinuteViewType === 'weekly' ? 'week' : 'month';
-                                return `Average for ${periodName}: ${avgRpm} reps/min`;
-                            }
-                        } : undefined
-                    }
-                },
-                animation: {
-                    duration: 2000,
-                    easing: 'easeInOutQuart'
-                },
-                interaction: {
-                    intersect: false,
-                    mode: 'index'
-                },
-                elements: {
-                    point: {
-                        radius: 5,
-                        hoverRadius: 8,
-                        backgroundColor: '#fff',
-                        borderWidth: 2
-                    },
-                    line: {
-                        borderWidth: 3,
-                        tension: 0.2
-                    }
-                },
-                scales: {
-                    ...options.scales,
-                    x: {
-                        ...options.scales.x,
-                        ticks: {
-                            ...options.scales.x.ticks,
-                            callback: this.getRepsPerMinuteXAxisTickCallback()
+        const rpmOptions = this.getChartOptions(chartTitle, {
+            plugins: {
+                title: { font: { family: 'Montserrat', size: 16, weight: 'bold' }, color: '#374151', padding: 20 },
+                tooltip: {
+                    ...options.plugins.tooltip,
+                    callbacks: this.repsPerMinuteViewType !== 'daily' ? {
+                        afterBody: (context) => {
+                            const values = context.filter(item => item.parsed.y > 0);
+                            const avgRpm = values.length > 0
+                                ? (values.reduce((sum, item) => sum + item.parsed.y, 0) / values.length).toFixed(2)
+                                : 0;
+                            const periodName = this.repsPerMinuteViewType === 'weekly' ? 'week' : 'month';
+                            return `Average for ${periodName}: ${avgRpm} reps/min`;
                         }
-                    },
-                    y: {
-                        ...options.scales.y,
-                        title: {
-                            display: true,
-                            text: 'Reps per Minute',
-                            font: {
-                                family: 'Montserrat',
-                                size: 13,
-                                weight: 'bold'
-                            },
-                            color: '#64748b'
-                        }
-                    }
+                    } : undefined
                 }
-            }
+            },
+            animation: { duration: 2000, easing: 'easeInOutQuart' },
+            interaction: { intersect: false, mode: 'index' },
+            elements: {
+                point: { radius: 5, hoverRadius: 8, backgroundColor: '#fff', borderWidth: 2 },
+                line: { borderWidth: 3, tension: 0.2 }
+            },
+            scales: { x: { ticks: { callback: this.getRepsPerMinuteXAxisTickCallback() } }, y: { title: { display: true, text: 'Reps per Minute', font: { family: 'Montserrat', size: 13, weight: 'bold' }, color: '#64748b' } } }
         });
+
+        const chart = this.createChart(canvasChartRepsPerMinute, 'line', chartData, { options: rpmOptions });
 
         this.charts.set('repsPerMinute', chart);
     }
@@ -284,116 +203,56 @@ class ChartManager {
             return;
         }
 
-        const chart = this.createChart(canvasChartRepsPerMonth, 'bar', monthlyChartData, {
-            type: "bar",
-            data: monthlyChartData,
-            options: {
-                scales: {
-                    x: {
-                        grid: {
-                            color: '#e8e9ed',
-                            lineWidth: 1
+        const monthlyOptions = this.getChartOptions('Monthly Progress', {
+            plugins: {
+                title: { font: { family: 'Montserrat', size: 16, weight: 'bold' }, color: '#374151', padding: 20 },
+                legend: { labels: { font: { family: 'Montserrat', size: 13 }, color: '#374151', usePointStyle: true, pointStyle: 'circle' } },
+                tooltip: {
+                    backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                    titleColor: '#fff',
+                    bodyColor: '#fff',
+                    borderColor: '#e5e7eb',
+                    borderWidth: 1,
+                    cornerRadius: 8,
+                    displayColors: true,
+                    font: { family: 'Montserrat' },
+                    callbacks: {
+                        title: function (context) {
+                            const label = context[0].label;
+                            const [year, month] = label.split('-');
+                            const monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+                            return `${monthNames[parseInt(month, 10) - 1]} ${year}`;
                         },
-                        ticks: {
-                            autoSkip: false,
-                            maxRotation: 0,
-                            minRotation: 0,
-                            color: '#64748b',
-                            font: {
-                                family: 'Montserrat',
-                                size: 11
-                            },
-                            callback: function (val, index) {
-                                const label = this.getLabelForValue(val);
-                                if (!label) return '';
-                                const [year, month] = label.split('-');
-                                const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-                                    'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-                                const monthName = monthNames[parseInt(month, 10) - 1];
-
-                                if (index === 0 || (monthlyChartData.labels[index - 1] &&
-                                    monthlyChartData.labels[index - 1].split('-')[0] !== year)) {
-                                    return [`${monthName}`, year];
-                                }
-                                return monthName;
-                            }
-                        }
-                    },
-                    y: {
-                        beginAtZero: true,
-                        grid: {
-                            color: '#e8e9ed',
-                            lineWidth: 1
-                        },
-                        ticks: {
-                            color: '#64748b',
-                            font: {
-                                family: 'Montserrat',
-                                size: 12
-                            }
-                        }
+                        label: function (context) { return `Total Reps: ${context.parsed.y}`; }
                     }
-                },
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                    title: {
-                        display: true,
-                        text: 'Monthly Progress',
-                        font: {
-                            family: 'Montserrat',
-                            size: 16,
-                            weight: 'bold'
-                        },
-                        color: '#374151',
-                        padding: 20
-                    },
-                    legend: {
-                        labels: {
-                            font: {
-                                family: 'Montserrat',
-                                size: 13
-                            },
-                            color: '#374151',
-                            usePointStyle: true,
-                            pointStyle: 'circle'
-                        }
-                    },
-                    tooltip: {
-                        backgroundColor: 'rgba(0, 0, 0, 0.8)',
-                        titleColor: '#fff',
-                        bodyColor: '#fff',
-                        borderColor: '#e5e7eb',
-                        borderWidth: 1,
-                        cornerRadius: 8,
-                        displayColors: true,
-                        font: {
-                            family: 'Montserrat'
-                        },
-                        callbacks: {
-                            title: function (context) {
-                                const label = context[0].label;
-                                const [year, month] = label.split('-');
-                                const monthNames = ['January', 'February', 'March', 'April', 'May', 'June',
-                                    'July', 'August', 'September', 'October', 'November', 'December'];
-                                return `${monthNames[parseInt(month, 10) - 1]} ${year}`;
-                            },
-                            label: function (context) {
-                                return `Total Reps: ${context.parsed.y}`;
-                            }
-                        }
-                    }
-                },
-                animation: {
-                    duration: 1800,
-                    easing: 'easeInOutQuart'
-                },
-                interaction: {
-                    intersect: false,
-                    mode: 'index'
                 }
+            },
+            animation: { duration: 1800, easing: 'easeInOutQuart' },
+            interaction: { intersect: false, mode: 'index' },
+            scales: {
+                x: {
+                    grid: { color: '#e8e9ed', lineWidth: 1 },
+                    ticks: {
+                        autoSkip: false,
+                        maxRotation: 0,
+                        minRotation: 0,
+                        color: '#64748b',
+                        font: { family: 'Montserrat', size: 11 },
+                        callback: function (val, index) {
+                            const label = this.getLabelForValue(val); if (!label) return '';
+                            const [year, month] = label.split('-');
+                            const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+                            const monthName = monthNames[parseInt(month, 10) - 1];
+                            if (index === 0 || (monthlyChartData.labels[index - 1] && monthlyChartData.labels[index - 1].split('-')[0] !== year)) return [`${monthName}`, year];
+                            return monthName;
+                        }
+                    }
+                },
+                y: { beginAtZero: true, grid: { color: '#e8e9ed', lineWidth: 1 }, ticks: { color: '#64748b', font: { family: 'Montserrat', size: 12 } } }
             }
         });
+
+        const chart = this.createChart(canvasChartRepsPerMonth, 'bar', monthlyChartData, { options: monthlyOptions });
 
         this.charts.set('monthly', chart);
     }    /**
@@ -426,110 +285,22 @@ class ChartManager {
             return;
         }
 
-        const chart = this.createChart(canvas, 'line', weeklyData, {
-            type: 'line',
-            data: weeklyData,
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                    title: {
-                        display: true,
-                        text: 'Weekly Progress Trends',
-                        font: {
-                            family: 'Montserrat',
-                            size: 16,
-                            weight: 'bold'
-                        },
-                        color: '#374151',
-                        padding: 20
-                    },
-                    legend: {
-                        labels: {
-                            font: {
-                                family: 'Montserrat',
-                                size: 13
-                            },
-                            color: '#374151',
-                            usePointStyle: true,
-                            pointStyle: 'circle'
-                        }
-                    },
-                    tooltip: {
-                        backgroundColor: 'rgba(0, 0, 0, 0.8)',
-                        titleColor: '#fff',
-                        bodyColor: '#fff',
-                        borderColor: '#e5e7eb',
-                        borderWidth: 1,
-                        cornerRadius: 8,
-                        displayColors: true,
-                        font: {
-                            family: 'Montserrat'
-                        }
-                    }
-                },
-                scales: {
-                    x: {
-                        grid: {
-                            color: '#e8e9ed',
-                            lineWidth: 1
-                        },
-                        ticks: {
-                            color: '#64748b',
-                            font: {
-                                family: 'Montserrat',
-                                size: 12
-                            }
-                        }
-                    },
-                    y: {
-                        beginAtZero: true,
-                        grid: {
-                            color: '#e8e9ed',
-                            lineWidth: 1
-                        },
-                        ticks: {
-                            color: '#64748b',
-                            font: {
-                                family: 'Montserrat',
-                                size: 12
-                            }
-                        }
-                    },
-                    y1: {
-                        beginAtZero: true,
-                        position: 'right',
-                        grid: {
-                            drawOnChartArea: false
-                        },
-                        ticks: {
-                            color: '#10B981',
-                            font: {
-                                family: 'Montserrat',
-                                size: 12
-                            }
-                        }
-                    }
-                },
-                elements: {
-                    point: {
-                        radius: 4,
-                        hoverRadius: 6,
-                        backgroundColor: '#fff',
-                        borderWidth: 2
-                    },
-                    line: {
-                        borderWidth: 3,
-                        tension: 0.3,
-                        fill: true
-                    }
-                },
-                animation: {
-                    duration: 2000,
-                    easing: 'easeInOutQuart'
-                }
-            }
+        const weeklyOptions = this.getChartOptions('Weekly Progress Trends', {
+            plugins: {
+                title: { font: { family: 'Montserrat', size: 16, weight: 'bold' }, color: '#374151', padding: 20 },
+                legend: { labels: { font: { family: 'Montserrat', size: 13 }, color: '#374151', usePointStyle: true, pointStyle: 'circle' } },
+                tooltip: { backgroundColor: 'rgba(0, 0, 0, 0.8)', titleColor: '#fff', bodyColor: '#fff', borderColor: '#e5e7eb', borderWidth: 1, cornerRadius: 8, displayColors: true, font: { family: 'Montserrat' } }
+            },
+            scales: {
+                x: { grid: { color: '#e8e9ed', lineWidth: 1 }, ticks: { color: '#64748b', font: { family: 'Montserrat', size: 12 } } },
+                y: { beginAtZero: true, grid: { color: '#e8e9ed', lineWidth: 1 }, ticks: { color: '#64748b', font: { family: 'Montserrat', size: 12 } } },
+                y1: { beginAtZero: true, position: 'right', grid: { drawOnChartArea: false }, ticks: { color: '#10B981', font: { family: 'Montserrat', size: 12 } } }
+            },
+            elements: { point: { radius: 4, hoverRadius: 6, backgroundColor: '#fff', borderWidth: 2 }, line: { borderWidth: 3, tension: 0.3, fill: true } },
+            animation: { duration: 2000, easing: 'easeInOutQuart' }
         });
+
+        const chart = this.createChart(canvas, 'line', weeklyData, { options: weeklyOptions });
 
         this.charts.set('weeklySummary', chart);
     }
@@ -1063,6 +834,52 @@ class ChartManager {
                 }
             }
         };
+    }
+
+    /**
+     * Build chart options from base options, a title, and chart-specific overrides.
+     * This produces a deep-ish merge for common nested plugin and scales areas.
+     */
+    getChartOptions(title, overrides = {}) {
+        const base = this.getBaseChartOptions();
+        // Merge title into base plugins
+        const options = {
+            ...base,
+            ...overrides,
+            plugins: {
+                ...base.plugins,
+                ...(overrides.plugins || {}),
+                title: {
+                    ...(base.plugins && base.plugins.title ? base.plugins.title : {}),
+                    ...(overrides.plugins && overrides.plugins.title ? overrides.plugins.title : {}),
+                    display: true,
+                    text: title,
+                }
+            }
+        };
+
+        // Deep-merge scales and ticks if provided
+        if (base.scales && overrides.scales) {
+            options.scales = {
+                ...base.scales,
+                ...overrides.scales,
+            };
+
+            Object.keys(base.scales).forEach(axis => {
+                if (overrides.scales[axis]) {
+                    options.scales[axis] = {
+                        ...base.scales[axis],
+                        ...overrides.scales[axis],
+                        ticks: {
+                            ...(base.scales[axis] && base.scales[axis].ticks ? base.scales[axis].ticks : {}),
+                            ...(overrides.scales[axis] && overrides.scales[axis].ticks ? overrides.scales[axis].ticks : {})
+                        }
+                    };
+                }
+            });
+        }
+
+        return options;
     }
 
     /**
