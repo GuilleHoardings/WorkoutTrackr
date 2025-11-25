@@ -644,20 +644,39 @@ class ChartManager {
         exerciseTypes.forEach((exerciseType, index) => {
             const exerciseData = workouts.filter(workout => workout.exercise === exerciseType);
 
-            // Create mapping of dates to values for this exercise
+            // Create mapping of dates to aggregated values for this exercise
             const dateToValue = {};
             exerciseData.forEach(workout => {
                 const formattedDate = this.createShortFormattedDate(new Date(workout.date));
+
+                if (!dateToValue[formattedDate]) {
+                    dateToValue[formattedDate] = isRepsPerMinute
+                        ? { totalReps: 0, totalTime: 0 }
+                        : 0;
+                }
+
                 if (isRepsPerMinute) {
-                    const time = workout.totalTime || 1; // Avoid division by zero
-                    dateToValue[formattedDate] = workout.totalReps / time;
+                    // Aggregate totals so multiple sessions per day get combined instead of overwritten
+                    const time = workout.totalTime && workout.totalTime > 0 ? workout.totalTime : 1;
+                    dateToValue[formattedDate].totalReps += workout.totalReps;
+                    dateToValue[formattedDate].totalTime += time;
                 } else {
-                    dateToValue[formattedDate] = workout.totalReps;
+                    dateToValue[formattedDate] += workout.totalReps;
                 }
             });
 
             // Fill in data for all dates (with zeros for missing dates to show gaps)
-            const valueData = uniqueDates.map(date => dateToValue[date] || 0);
+            const valueData = uniqueDates.map(date => {
+                const value = dateToValue[date];
+                if (!value) {
+                    return 0;
+                }
+                if (isRepsPerMinute) {
+                    const { totalReps, totalTime } = value;
+                    return totalReps / (totalTime || 1);
+                }
+                return value;
+            });
 
             // Get base color for this exercise (consistent across all charts)
             const baseColor = this.getExerciseBaseColor(exerciseType, index);
