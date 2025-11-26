@@ -83,15 +83,17 @@ class ChartManager {
         const chartTitle = `${viewConfig[period] || 'Daily'} Total Reps by Exercise`;
         const isStacked = true;
 
-        const chartData = ChartDataUtils.preparePeriodRepsData(
-            this.dataManager.getAllWorkouts(),
-            exerciseTypes,
-            period,
-            this.getExerciseBaseColor.bind(this),
-            ColorUtils.convertToValidColor,
-            ColorUtils.adjustColorOpacity,
-            this.generateColorScale.bind(this)
-        );
+        const chartData = period === 'daily'
+            ? { labels: uniqueDates, datasets: this.createChartDatasets(exerciseTypes, uniqueDates, false) }
+            : ChartDataUtils.preparePeriodRepsData(
+                this.dataManager.getAllWorkouts(),
+                exerciseTypes,
+                period,
+                this.getExerciseBaseColor.bind(this),
+                ColorUtils.convertToValidColor,
+                ColorUtils.adjustColorOpacity,
+                this.generateColorScale.bind(this)
+            );
 
         const mergedOptions = this.getChartOptions(chartTitle, {
             plugins: {
@@ -315,16 +317,18 @@ class ChartManager {
             const workouts = this.dataManager.getAllWorkouts();
 
             // Update total reps chart
-            this.updateChartData('totalReps', () => 
-                ChartDataUtils.preparePeriodRepsData(
-                    workouts,
-                    exerciseTypes,
-                    this.totalRepsViewType,
-                    this.getExerciseBaseColor.bind(this),
-                    ColorUtils.convertToValidColor,
-                    ColorUtils.adjustColorOpacity,
-                    this.generateColorScale.bind(this)
-                )
+            this.updateChartData('totalReps', () =>
+                this.totalRepsViewType === 'daily'
+                    ? { labels: uniqueDates, datasets: this.createChartDatasets(exerciseTypes, uniqueDates, false) }
+                    : ChartDataUtils.preparePeriodRepsData(
+                        workouts,
+                        exerciseTypes,
+                        this.totalRepsViewType,
+                        this.getExerciseBaseColor.bind(this),
+                        ColorUtils.convertToValidColor,
+                        ColorUtils.adjustColorOpacity,
+                        this.generateColorScale.bind(this)
+                    )
             );
 
             // Update reps per minute chart
@@ -954,7 +958,7 @@ class ChartManager {
             return [];
         }
 
-        return ChartDataUtils.getAllDatesBetweenWorkouts(workouts, 365);
+        return ChartDataUtils.getAllDatesBetweenWorkouts(workouts, 90);
     }
 
     /**

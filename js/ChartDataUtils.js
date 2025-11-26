@@ -196,7 +196,7 @@ function prepareWeeklyChartData(workouts) {
     };
 }
 
-function preparePeriodRepsData(workouts, exerciseTypes, period, getExerciseBaseColor, convertToValidColor, adjustColorOpacity, generateColorScaleFn) {
+function preparePeriodRepsData(workouts, exerciseTypes, period, getExerciseBaseColor, convertToValidColor, adjustColorOpacity, generateColorScaleFn, options = {}) {
     const periodData = {};
 
     if (workouts.length === 0) {
@@ -219,13 +219,15 @@ function preparePeriodRepsData(workouts, exerciseTypes, period, getExerciseBaseC
     });
 
     const allPeriods = generatePeriodRange(workouts, period);
+    // If caller provided explicit labels (for example daily labels limited by maxDays), use them
+    const labels = (options && Array.isArray(options.labels) && options.labels.length) ? options.labels : allPeriods;
 
     const yearlyColors = period === 'yearly'
         ? (generateColorScaleFn || (() => []))(exerciseTypes.length)
         : null;
 
     const datasets = exerciseTypes.map((exerciseType, index) => {
-        const data = allPeriods.map(periodKey =>
+        const data = labels.map(periodKey =>
             (periodData[periodKey] && periodData[periodKey][exerciseType]) || 0
         );
         const baseColor = getExerciseBaseColor(exerciseType, index);
@@ -251,7 +253,7 @@ function preparePeriodRepsData(workouts, exerciseTypes, period, getExerciseBaseC
     });
 
     return {
-        labels: allPeriods,
+        labels: labels,
         datasets: datasets
     };
 }
