@@ -32,43 +32,45 @@
     </div>
     <div class="container">
         <div class="left-side">
-            <div class="exercise-controls">
-                <form id="workout-form">
-                    <div class="form-controls-row">
-                        <div class="form-group">
-                            <label for="exercise-select">Exercise:</label>
-                            <select id="exercise-select" name="exercise">
-                                <option value="Push-ups">Push-ups</option>
-                                <option value="Pull-ups">Pull-ups</option>
-                                <option value="Squats">Squats</option>
-                                <option value="Sit-ups">Sit-ups</option>
-                                <option value="Lunges">Lunges</option>
-                                <option value="Dips">Dips</option>
-                                <option value="Planks">Planks</option>
-                            </select>
+            <div class="top-controls-row">
+                <div class="exercise-controls">
+                    <form id="workout-form">
+                        <div class="form-controls-row">
+                            <div class="form-group">
+                                <label for="exercise-select">Exercise:</label>
+                                <select id="exercise-select" name="exercise">
+                                    <option value="Push-ups">Push-ups</option>
+                                    <option value="Pull-ups">Pull-ups</option>
+                                    <option value="Squats">Squats</option>
+                                    <option value="Sit-ups">Sit-ups</option>
+                                    <option value="Lunges">Lunges</option>
+                                    <option value="Dips">Dips</option>
+                                    <option value="Planks">Planks</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label for="reps">Repetitions:</label>
+                                <input type="number" id="reps" name="reps" min="1" max="200" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="weight">Weight (kg):</label>
+                                <input type="number" id="weight" name="weight" min="0" max="500" step="0.5">
+                            </div>
+                            <div class="form-group submit-group">
+                                <input type="submit" value="Add Exercise">
+                            </div>
                         </div>
-                        <div class="form-group">
-                            <label for="reps">Repetitions:</label>
-                            <input type="number" id="reps" name="reps" min="1" max="200" required>
-                        </div>
-                        <div class="form-group">
-                            <label for="weight">Weight (kg):</label>
-                            <input type="number" id="weight" name="weight" min="0" max="500" step="0.5">
-                        </div>
-                        <div class="form-group submit-group">
-                            <input type="submit" value="Add Exercise">
-                        </div>
-                    </div>
-                </form>
-            </div>
+                    </form>
+                </div>
 
-            <div class="csv-controls">
-                <button id="download-csv">Download CSV</button>
-                <button id="import-csv">Add CSV data</button>
-                <input type="file" id="file-input" accept=".csv" style="display: none;">
-                <button id="import-csv-replace">Import CSV (Replace All)</button>
-                <input type="file" id="file-input-replace" accept=".csv" style="display: none;">
-                <button id="share-data">Share Workouts</button>
+                <div class="csv-controls">
+                    <button id="download-csv">Download CSV</button>
+                    <button id="import-csv">Add CSV data</button>
+                    <input type="file" id="file-input" accept=".csv" style="display: none;">
+                    <button id="import-csv-replace">Import CSV (Replace All)</button>
+                    <input type="file" id="file-input-replace" accept=".csv" style="display: none;">
+                    <button id="share-data">Share Workouts</button>
+                </div>
             </div>
 
             <div class="exercise-management">
