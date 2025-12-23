@@ -54,6 +54,7 @@ class ChartManager {
             this.createRepsPerMinuteChart(exerciseTypes, uniqueDates, options);
             this.createMonthlyChart();
             this.createWeeklySummaryChart();
+            this.createPersonalRecordsChart();
             this.createActivityChart();
 
         } catch (error) {
@@ -258,6 +259,99 @@ class ChartManager {
 
         this.charts.set('monthly', chart);
     }    /**
+     * Create personal records chart showing best sets over time
+     */
+    createPersonalRecordsChart() {
+        const prData = this.preparePersonalRecordsData();
+        const canvas = document.getElementById('personal-records-chart');
+
+        if (!canvas) {
+            console.warn("Personal records chart canvas not found");
+            return;
+        }
+
+        const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+        const prOptions = this.getChartOptions('Personal Records (Best Single Set)', {
+            plugins: {
+                title: { font: { family: 'Montserrat', size: 16, weight: 'bold' }, color: '#374151', padding: 20 },
+                legend: { labels: { font: { family: 'Montserrat', size: 13 }, color: '#374151', usePointStyle: true, pointStyle: 'circle' } },
+                tooltip: {
+                    backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                    titleColor: '#fff',
+                    bodyColor: '#fff',
+                    borderColor: '#e5e7eb',
+                    borderWidth: 1,
+                    cornerRadius: 8,
+                    displayColors: true,
+                    font: { family: 'Montserrat' },
+                    callbacks: {
+                        title: function(context) {
+                            const label = context[0].label;
+                            const [year, month] = label.split('-');
+                            return `${monthNames[parseInt(month, 10) - 1]} ${year}`;
+                        },
+                        label: function(context) {
+                            return `${context.dataset.label}: ${context.parsed.y} reps (PR)`;
+                        }
+                    }
+                }
+            },
+            scales: {
+                x: {
+                    grid: { color: '#e8e9ed', lineWidth: 1 },
+                    ticks: {
+                        autoSkip: false,
+                        maxRotation: 0,
+                        minRotation: 0,
+                        color: '#64748b',
+                        font: { family: 'Montserrat', size: 11 },
+                        callback: function(val, index) {
+                            const label = this.getLabelForValue(val);
+                            if (!label) return '';
+                            const [year, month] = label.split('-');
+                            const monthName = monthNames[parseInt(month, 10) - 1];
+                            if (index === 0 || (prData.labels[index - 1] && prData.labels[index - 1].split('-')[0] !== year)) {
+                                return [`${monthName}`, year];
+                            }
+                            return monthName;
+                        }
+                    }
+                },
+                y: {
+                    beginAtZero: true,
+                    grid: { color: '#e8e9ed', lineWidth: 1 },
+                    ticks: { color: '#64748b', font: { family: 'Montserrat', size: 12 } },
+                    title: { display: true, text: 'Best Reps in Single Set', font: { family: 'Montserrat', size: 13, weight: 'bold' }, color: '#64748b' }
+                }
+            },
+            elements: {
+                point: { radius: 5, hoverRadius: 8, backgroundColor: '#fff', borderWidth: 2 },
+                line: { borderWidth: 3, tension: 0.3 }
+            },
+            animation: { duration: 2000, easing: 'easeInOutQuart' }
+        });
+
+        const chart = this.createChart(canvas, 'line', prData, { options: prOptions });
+
+        this.charts.set('personalRecords', chart);
+    }
+
+    /**
+     * Prepare personal records data
+     */
+    preparePersonalRecordsData() {
+        const exerciseTypes = this.getExerciseTypes();
+        return ChartDataUtils.preparePersonalRecordsData(
+            this.dataManager.getAllWorkouts(),
+            exerciseTypes,
+            this.getExerciseBaseColor.bind(this),
+            ColorUtils.convertToValidColor,
+            ColorUtils.adjustColorOpacity
+        );
+    }
+
+    /**
      * Create activity chart
      */
     createActivityChart() {
@@ -353,6 +447,9 @@ class ChartManager {
 
             // Update weekly summary chart
             this.updateChartData('weeklySummary', () => this.prepareWeeklyChartData());
+
+            // Update personal records chart
+            this.updateChartData('personalRecords', () => this.preparePersonalRecordsData());
 
         } catch (error) {
             console.error("Error updating charts:", error);

@@ -325,6 +325,104 @@ function preparePeriodRepsPerMinuteData(workouts, exerciseTypes, period, getExer
     };
 }
 
+/**
+ * Prepare personal records data showing best single set per exercise over time
+ * @param {Array} workouts - Array of workout data
+ * @param {Array} exerciseTypes - Array of exercise types to include
+ * @param {Function} getExerciseBaseColor - Function to get base color for exercise
+ * @param {Function} convertToValidColor - Function to convert color to valid format
+ * @param {Function} adjustColorOpacity - Function to adjust color opacity
+ * @returns {Object} Chart data with labels and datasets
+ */
+function preparePersonalRecordsData(workouts, exerciseTypes, getExerciseBaseColor, convertToValidColor, adjustColorOpacity) {
+    if (workouts.length === 0) {
+        return { labels: [], datasets: [] };
+    }
+
+    // Track running best for each exercise by month
+    const monthlyBests = {};
+    const exercisePRs = {};
+
+    // Initialize exercise PRs
+    exerciseTypes.forEach(ex => {
+        exercisePRs[ex] = 0;
+    });
+
+    // Sort workouts by date
+    const sortedWorkouts = [...workouts].sort((a, b) => new Date(a.date) - new Date(b.date));
+
+    // Process each workout
+    sortedWorkouts.forEach(workout => {
+        const date = new Date(workout.date);
+        const monthKey = createMonthKey(date.getFullYear(), date.getMonth() + 1);
+        const exercise = workout.exercise;
+
+        // Find best set in this workout
+        let bestSet = 0;
+        if (workout.series && workout.series.length > 0) {
+            bestSet = Math.max(...workout.series.map(s => s.reps));
+        } else {
+            // No per-set data available (old data format) – do not use totalReps for PR tracking
+            bestSet = 0;
+        }
+
+        // Store monthly running PRs
+        if (!monthlyBests[monthKey]) {
+            monthlyBests[monthKey] = {};
+        }
+
+        // Only update when a new PR is actually set
+        if (bestSet > exercisePRs[exercise]) {
+            exercisePRs[exercise] = bestSet;
+            monthlyBests[monthKey][exercise] = bestSet;
+        } else if (!monthlyBests[monthKey][exercise]) {
+            // First workout of this exercise in this month - store current running PR
+            monthlyBests[monthKey][exercise] = exercisePRs[exercise];
+        }
+    });
+
+    // Get sorted month labels
+    const labels = Object.keys(monthlyBests).sort();
+
+    // Create datasets for each exercise
+    const datasets = exerciseTypes.map((exerciseType, index) => {
+        let runningBest = 0;
+        const data = labels.map(monthKey => {
+            if (monthlyBests[monthKey] && monthlyBests[monthKey][exerciseType]) {
+                runningBest = monthlyBests[monthKey][exerciseType];
+            }
+            return runningBest > 0 ? runningBest : null;
+        });
+
+        const baseColor = getExerciseBaseColor(exerciseType, index);
+        const validColor = convertToValidColor(baseColor);
+
+        return {
+            label: exerciseType,
+            data: data,
+            borderColor: validColor,
+            backgroundColor: adjustColorOpacity(validColor, 0.1),
+            borderWidth: 3,
+            tension: 0.3,
+            pointBackgroundColor: validColor,
+            pointBorderColor: '#fff',
+            pointBorderWidth: 2,
+            pointRadius: 5,
+            pointHoverRadius: 8,
+            pointHoverBackgroundColor: validColor,
+            pointHoverBorderColor: '#fff',
+            pointHoverBorderWidth: 3,
+            fill: false,
+            spanGaps: true
+        };
+    });
+
+    return {
+        labels: labels,
+        datasets: datasets
+    };
+}
+
 if (typeof module !== 'undefined' && module.exports) {
     module.exports = {
         createShortFormattedDate,
@@ -336,7 +434,8 @@ if (typeof module !== 'undefined' && module.exports) {
         getAllDatesBetweenWorkouts,
         prepareWeeklyChartData,
         preparePeriodRepsData,
-        preparePeriodRepsPerMinuteData
+        preparePeriodRepsPerMinuteData,
+        preparePersonalRecordsData
     };
 } else {
     window.ChartDataUtils = {
@@ -349,6 +448,7 @@ if (typeof module !== 'undefined' && module.exports) {
         getAllDatesBetweenWorkouts,
         prepareWeeklyChartData,
         preparePeriodRepsData,
-        preparePeriodRepsPerMinuteData
+        preparePeriodRepsPerMinuteData,
+        preparePersonalRecordsData
     };
 }
