@@ -25,6 +25,10 @@
     <div class="header">
         <img id="logo" src="pushup.png" alt="workout icon">
         <h1>WorkoutTrackr</h1>
+        <button id="dashboard-toggle" class="dashboard-toggle-btn" title="Toggle Dashboard Mode">
+            <span class="dashboard-icon">📊</span>
+            <span class="dashboard-text">Dashboard</span>
+        </button>
     </div>
     <div class="container">
         <div class="left-side">
@@ -105,6 +109,24 @@
         </div>
 
         <div class="right-side">
+            <div class="dashboard-stats-bar" id="dashboard-stats">
+                <div class="dashboard-stat">
+                    <span class="dashboard-stat-value" id="stat-total-workouts">0</span>
+                    <span class="dashboard-stat-label">Workouts</span>
+                </div>
+                <div class="dashboard-stat">
+                    <span class="dashboard-stat-value" id="stat-total-reps">0</span>
+                    <span class="dashboard-stat-label">Total Reps</span>
+                </div>
+                <div class="dashboard-stat">
+                    <span class="dashboard-stat-value" id="stat-exercise-types">0</span>
+                    <span class="dashboard-stat-label">Exercise Types</span>
+                </div>
+                <div class="dashboard-stat">
+                    <span class="dashboard-stat-value" id="stat-this-week">0</span>
+                    <span class="dashboard-stat-label">This Week</span>
+                </div>
+            </div>
             <div class="chart-container">
                 <div class="chart-header">
                     <h3>Total Reps Progress</h3>

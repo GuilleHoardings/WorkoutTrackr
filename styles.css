@@ -1002,3 +1002,197 @@ input#weight, input#reps {
         max-height: 150px;
     }
 }
+
+/* ============================================
+   DASHBOARD MODE STYLES
+   ============================================ */
+
+/* Dashboard toggle button in header */
+.dashboard-toggle-btn {
+    position: absolute;
+    right: 20px;
+    display: flex !important;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 16px !important;
+    background: rgba(255, 255, 255, 0.15) !important;
+    border: 1px solid rgba(255, 255, 255, 0.3) !important;
+    border-radius: 25px !important;
+    color: white;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    font-family: 'Montserrat', sans-serif;
+    font-size: 14px;
+    font-weight: 500;
+    backdrop-filter: blur(4px);
+    height: auto !important;
+    margin-top: 0 !important;
+    width: auto !important;
+}
+
+.dashboard-toggle-btn:hover {
+    background: rgba(255, 255, 255, 0.25) !important;
+    transform: scale(1.02);
+}
+
+.dashboard-toggle-btn.active {
+    background: #3b82f6 !important;
+    border-color: #3b82f6 !important;
+    box-shadow: 0 2px 12px rgba(59, 130, 246, 0.4);
+}
+
+.dashboard-icon {
+    font-size: 16px;
+}
+
+.dashboard-text {
+    font-weight: 500;
+}
+
+/* Header positioning for toggle button */
+.header {
+    position: relative;
+}
+
+/* Dashboard mode - hide left side and expand charts */
+body.dashboard-mode .left-side {
+    display: none !important;
+}
+
+body.dashboard-mode .container {
+    padding: 20px;
+}
+
+body.dashboard-mode .right-side {
+    flex: 1;
+    width: 100%;
+    max-width: 100%;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(450px, 1fr));
+    gap: 24px;
+    padding: 20px;
+    background: transparent;
+    box-shadow: none;
+}
+
+/* Dashboard mode chart containers */
+body.dashboard-mode .chart-container {
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    height: 400px;
+    max-height: 450px;
+    margin-bottom: 0;
+}
+
+/* Make the calendar span full width in dashboard mode */
+body.dashboard-mode #calendar.chart-container {
+    grid-column: 1 / -1;
+    height: auto;
+    max-height: none;
+}
+
+/* Dashboard mode responsive adjustments */
+@media (max-width: 1200px) {
+    body.dashboard-mode .right-side {
+        grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+    }
+}
+
+@media (max-width: 800px) {
+    body.dashboard-mode .right-side {
+        grid-template-columns: 1fr;
+        gap: 16px;
+    }
+    
+    body.dashboard-mode .chart-container {
+        height: 350px;
+    }
+    
+    .dashboard-toggle-btn {
+        padding: 6px 12px;
+        font-size: 12px;
+        right: 10px;
+    }
+    
+    .dashboard-text {
+        display: none;
+    }
+}
+
+/* Subtle animation when entering dashboard mode */
+body.dashboard-mode .chart-container {
+    animation: dashboardFadeIn 0.4s ease-out;
+}
+
+@keyframes dashboardFadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Dashboard mode summary stats bar */
+.dashboard-stats-bar {
+    display: none;
+    grid-column: 1 / -1;
+    background: linear-gradient(135deg, #36454f 0%, #4a5c6a 100%);
+    border-radius: 12px;
+    padding: 20px 30px;
+    color: white;
+    margin-bottom: 10px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+}
+
+body.dashboard-mode .dashboard-stats-bar {
+    display: flex;
+    justify-content: space-around;
+    flex-wrap: wrap;
+    gap: 20px;
+}
+
+.dashboard-stat {
+    text-align: center;
+    padding: 10px 20px;
+}
+
+.dashboard-stat-value {
+    font-size: 32px;
+    font-weight: 700;
+    display: block;
+    margin-bottom: 5px;
+    background: linear-gradient(135deg, #60a5fa, #34d399);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+.dashboard-stat-label {
+    font-size: 13px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    opacity: 0.85;
+}
+
+@media (max-width: 600px) {
+    .dashboard-stats-bar {
+        padding: 15px;
+    }
+    
+    .dashboard-stat {
+        padding: 8px 15px;
+        flex: 1 1 40%;
+    }
+    
+    .dashboard-stat-value {
+        font-size: 24px;
+    }
+    
+    .dashboard-stat-label {
+        font-size: 11px;
+    }
+}

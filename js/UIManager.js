@@ -281,6 +281,9 @@ class UIManager {
         // Initialize exercise management UI
         this.initializeExerciseManagement();
 
+        // Initialize dashboard mode
+        this.initializeDashboardMode();
+
         const workouts = this.dataManager.getAllWorkouts();
         if (workouts.length > 0) {
             this.updateWorkoutTable();
@@ -298,6 +301,11 @@ class UIManager {
         this.updateExerciseDropdown();
         this.updateExerciseTypesList();
         this.updateActivityLegend();
+        
+        // Update dashboard stats if in dashboard mode
+        if (document.body.classList.contains('dashboard-mode')) {
+            this.updateDashboardStats();
+        }
     }
 
     /**
@@ -617,6 +625,140 @@ class UIManager {
         } else {
             this.domElements.exerciseManagement.classList.remove('collapsed');
         }
+    }
+
+    // ============================================
+    // DASHBOARD MODE METHODS
+    // ============================================
+
+    /**
+     * Initialize dashboard mode functionality
+     */
+    initializeDashboardMode() {
+        const dashboardToggle = document.getElementById('dashboard-toggle');
+        if (!dashboardToggle) {
+            console.warn('Dashboard toggle button not found');
+            return;
+        }
+
+        // Load saved state from localStorage
+        const savedState = localStorage.getItem('dashboardMode');
+        if (savedState === 'true') {
+            this.enableDashboardMode();
+        }
+
+        // Add click event listener
+        dashboardToggle.addEventListener('click', () => this.toggleDashboardMode());
+    }
+
+    /**
+     * Toggle dashboard mode on/off
+     */
+    toggleDashboardMode() {
+        const isDashboardMode = document.body.classList.contains('dashboard-mode');
+        
+        if (isDashboardMode) {
+            this.disableDashboardMode();
+        } else {
+            this.enableDashboardMode();
+        }
+    }
+
+    /**
+     * Enable dashboard mode
+     */
+    enableDashboardMode() {
+        document.body.classList.add('dashboard-mode');
+        
+        const dashboardToggle = document.getElementById('dashboard-toggle');
+        if (dashboardToggle) {
+            dashboardToggle.classList.add('active');
+            dashboardToggle.title = 'Exit Dashboard Mode';
+        }
+
+        // Update dashboard stats
+        this.updateDashboardStats();
+
+        // Save state
+        localStorage.setItem('dashboardMode', 'true');
+
+        // Trigger chart resize after layout change
+        setTimeout(() => {
+            window.dispatchEvent(new Event('resize'));
+        }, 100);
+    }
+
+    /**
+     * Disable dashboard mode
+     */
+    disableDashboardMode() {
+        document.body.classList.remove('dashboard-mode');
+        
+        const dashboardToggle = document.getElementById('dashboard-toggle');
+        if (dashboardToggle) {
+            dashboardToggle.classList.remove('active');
+            dashboardToggle.title = 'Toggle Dashboard Mode';
+        }
+
+        // Save state
+        localStorage.setItem('dashboardMode', 'false');
+
+        // Trigger chart resize after layout change
+        setTimeout(() => {
+            window.dispatchEvent(new Event('resize'));
+        }, 100);
+    }
+
+    /**
+     * Update dashboard statistics display
+     */
+    updateDashboardStats() {
+        const workouts = this.dataManager.getAllWorkouts();
+        
+        // Calculate stats
+        const totalWorkouts = workouts.length;
+        const totalReps = workouts.reduce((sum, workout) => sum + workout.totalReps, 0);
+        const exerciseTypes = this.dataManager.getUniqueExerciseTypes()?.length || 0;
+        
+        // Calculate this week's reps
+        const now = new Date();
+        const startOfWeek = new Date(now);
+        startOfWeek.setDate(now.getDate() - now.getDay());
+        startOfWeek.setHours(0, 0, 0, 0);
+        
+        const thisWeekReps = workouts
+            .filter(workout => new Date(workout.date) >= startOfWeek)
+            .reduce((sum, workout) => sum + workout.totalReps, 0);
+
+        // Update DOM elements
+        const statElements = {
+            'stat-total-workouts': this.formatStatNumber(totalWorkouts),
+            'stat-total-reps': this.formatStatNumber(totalReps),
+            'stat-exercise-types': exerciseTypes,
+            'stat-this-week': this.formatStatNumber(thisWeekReps)
+        };
+
+        for (const [id, value] of Object.entries(statElements)) {
+            const element = document.getElementById(id);
+            if (element) {
+                element.textContent = value;
+            }
+        }
+    }
+
+    /**
+     * Format large numbers for display (e.g., 1234 -> 1.2K)
+     * @param {number} num - Number to format
+     * @returns {string} Formatted number string
+     */
+    formatStatNumber(num) {
+        if (num >= 1000000) {
+            return (num / 1000000).toFixed(1).replace(/\.0$/, '') + 'M';
+        }
+        if (num >= 10000) {
+            return (num / 1000).toFixed(1).replace(/\.0$/, '') + 'K';
+        }
+        return num.toLocaleString();
     }
 }
 
