@@ -340,6 +340,12 @@ tr:nth-child(even) {
     height: 400px;
 }
 
+/* Consistency chart styling */
+#consistency-chart {
+    max-height: 400px;
+    height: 400px;
+}
+
 /* Calendar chart - inherits styling from .chart-container but with height overrides */
 #calendar {
     display: block !important;

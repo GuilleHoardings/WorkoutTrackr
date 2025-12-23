@@ -55,6 +55,7 @@ class ChartManager {
             this.createMonthlyChart();
             this.createWeeklySummaryChart();
             this.createPersonalRecordsChart();
+            this.createConsistencyChart();
             this.createActivityChart();
 
         } catch (error) {
@@ -402,6 +403,100 @@ class ChartManager {
     }
 
     /**
+     * Create consistency chart showing training frequency and streaks
+     */
+    createConsistencyChart() {
+        const consistencyData = this.prepareConsistencyChartData();
+        const canvas = document.getElementById('consistency-chart');
+
+        if (!canvas) {
+            console.warn("Consistency chart canvas not found");
+            return;
+        }
+
+        const { stats } = consistencyData;
+
+        const consistencyOptions = this.getChartOptions('Training Consistency', {
+            plugins: {
+                title: { 
+                    font: { family: 'Montserrat', size: 16, weight: 'bold' }, 
+                    color: '#374151', 
+                    padding: 20 
+                },
+                subtitle: {
+                    display: true,
+                    text: `Current Streak: ${stats.currentStreak} days | Longest: ${stats.longestStreak} days | Avg: ${stats.avgDaysPerWeek} days/week`,
+                    font: { family: 'Montserrat', size: 13 },
+                    color: '#6b7280',
+                    padding: { bottom: 15 }
+                },
+                legend: { 
+                    labels: { 
+                        font: { family: 'Montserrat', size: 13 }, 
+                        color: '#374151', 
+                        usePointStyle: true, 
+                        pointStyle: 'rect' 
+                    } 
+                },
+                tooltip: { 
+                    backgroundColor: 'rgba(0, 0, 0, 0.8)', 
+                    titleColor: '#fff', 
+                    bodyColor: '#fff', 
+                    borderColor: '#e5e7eb', 
+                    borderWidth: 1, 
+                    cornerRadius: 8, 
+                    displayColors: true, 
+                    font: { family: 'Montserrat' },
+                    callbacks: {
+                        label: function(context) {
+                            if (context.dataset.type === 'bar') {
+                                return `${context.parsed.y} day${context.parsed.y !== 1 ? 's' : ''} trained`;
+                            }
+                            return `Average: ${context.parsed.y.toFixed(1)} days`;
+                        }
+                    }
+                }
+            },
+            scales: {
+                x: { 
+                    grid: { color: '#e8e9ed', lineWidth: 1 }, 
+                    ticks: { 
+                        color: '#64748b', 
+                        font: { family: 'Montserrat', size: 11 },
+                        maxRotation: 45,
+                        minRotation: 45
+                    } 
+                },
+                y: { 
+                    beginAtZero: true, 
+                    max: 7,
+                    grid: { color: '#e8e9ed', lineWidth: 1 }, 
+                    ticks: { 
+                        color: '#64748b', 
+                        font: { family: 'Montserrat', size: 12 },
+                        stepSize: 1
+                    },
+                    title: {
+                        display: true,
+                        text: 'Days per Week',
+                        font: { family: 'Montserrat', size: 12, weight: 'bold' },
+                        color: '#64748b'
+                    }
+                }
+            },
+            elements: { 
+                bar: { borderRadius: 4 },
+                line: { borderWidth: 3, tension: 0.4 }
+            },
+            animation: { duration: 2000, easing: 'easeInOutQuart' }
+        });
+
+        const chart = this.createChart(canvas, 'bar', consistencyData, { options: consistencyOptions });
+
+        this.charts.set('consistency', chart);
+    }
+
+    /**
      * Update all existing charts
      */
     updateCharts() {
@@ -450,6 +545,9 @@ class ChartManager {
 
             // Update personal records chart
             this.updateChartData('personalRecords', () => this.preparePersonalRecordsData());
+
+            // Update consistency chart
+            this.updateChartData('consistency', () => this.prepareConsistencyChartData());
 
         } catch (error) {
             console.error("Error updating charts:", error);
@@ -1036,6 +1134,123 @@ class ChartManager {
      */
     switchRepsPerMinuteView(viewType) {
         this.switchChartView('repsPerMinute', 'repsPerMinuteViewType', viewType, this.createRepsPerMinuteChart);
+    }
+
+    /**
+     * Prepare consistency chart data - shows training frequency per week
+     */
+    prepareConsistencyChartData() {
+        const workouts = this.dataManager.getAllWorkouts();
+        if (workouts.length === 0) {
+            return { labels: [], datasets: [], stats: { currentStreak: 0, longestStreak: 0, avgDaysPerWeek: 0 } };
+        }
+
+        // Group workouts by week
+        const weeklyTrainingDays = {};
+        const trainingDates = new Set();
+
+        workouts.forEach(workout => {
+            const date = new Date(workout.date);
+            const dateStr = date.toISOString().split('T')[0];
+            trainingDates.add(dateStr);
+            
+            const weekKey = ChartDataUtils.getPeriodKey(date, 'weekly');
+            if (!weeklyTrainingDays[weekKey]) {
+                weeklyTrainingDays[weekKey] = new Set();
+            }
+            weeklyTrainingDays[weekKey].add(dateStr);
+        });
+
+        // Generate all weeks in range
+        const allWeeks = ChartDataUtils.generatePeriodRange(workouts, 'weekly');
+        
+        // Calculate days trained per week
+        const daysPerWeek = allWeeks.map(week => {
+            return weeklyTrainingDays[week] ? weeklyTrainingDays[week].size : 0;
+        });
+
+        // Calculate streaks (consecutive days with training)
+        const sortedDates = Array.from(trainingDates).sort();
+        let currentStreak = 0;
+        let longestStreak = 0;
+        let tempStreak = 0;
+        
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const todayStr = today.toISOString().split('T')[0];
+        const yesterday = new Date(today);
+        yesterday.setDate(yesterday.getDate() - 1);
+        const yesterdayStr = yesterday.toISOString().split('T')[0];
+
+        for (let i = 0; i < sortedDates.length; i++) {
+            if (i === 0) {
+                tempStreak = 1;
+            } else {
+                const prevDate = new Date(sortedDates[i - 1]);
+                const currDate = new Date(sortedDates[i]);
+                const diffDays = Math.round((currDate - prevDate) / (1000 * 60 * 60 * 24));
+                
+                if (diffDays === 1) {
+                    tempStreak++;
+                } else {
+                    tempStreak = 1;
+                }
+            }
+            longestStreak = Math.max(longestStreak, tempStreak);
+        }
+
+        // Check if current streak is active (last workout was today or yesterday)
+        if (sortedDates.length > 0) {
+            const lastWorkoutDate = sortedDates[sortedDates.length - 1];
+            if (lastWorkoutDate === todayStr || lastWorkoutDate === yesterdayStr) {
+                currentStreak = tempStreak;
+            }
+        }
+
+        // Calculate average days per week
+        const totalDays = daysPerWeek.reduce((sum, days) => sum + days, 0);
+        const avgDaysPerWeek = allWeeks.length > 0 ? Math.round((totalDays / allWeeks.length) * 10) / 10 : 0;
+
+        // Calculate 4-week moving average for trend line
+        const movingAvg = daysPerWeek.map((_, idx, arr) => {
+            const start = Math.max(0, idx - 3);
+            const slice = arr.slice(start, idx + 1);
+            return slice.reduce((sum, val) => sum + val, 0) / slice.length;
+        });
+
+        return {
+            labels: allWeeks,
+            datasets: [
+                {
+                    label: 'Days Trained',
+                    data: daysPerWeek,
+                    backgroundColor: 'rgba(59, 130, 246, 0.7)',
+                    borderColor: '#3B82F6',
+                    borderWidth: 1,
+                    borderRadius: 4,
+                    type: 'bar',
+                    order: 2
+                },
+                {
+                    label: '4-Week Average',
+                    data: movingAvg,
+                    borderColor: '#10B981',
+                    backgroundColor: 'rgba(16, 185, 129, 0.1)',
+                    borderWidth: 3,
+                    tension: 0.4,
+                    fill: true,
+                    type: 'line',
+                    order: 1,
+                    pointRadius: 0,
+                    pointHoverRadius: 4
+                }
+            ],
+            stats: {
+                currentStreak,
+                longestStreak,
+                avgDaysPerWeek
+            }
+        };
     }
 
     /**
