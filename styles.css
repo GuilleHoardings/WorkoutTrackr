@@ -163,8 +163,8 @@ input#weight {
     box-sizing: border-box;
 }
 
-/* Button styling */
-button,
+/* Button styling - excludes special buttons like dashboard toggle */
+button:not(.dashboard-toggle-btn):not(.chart-toggle-btn),
 input[type="submit"] {
     padding: 12px 20px;
     /* Ensuring both buttons have the same padding */
@@ -189,7 +189,7 @@ input[type="submit"] {
     /* Vertically aligning content */
 }
 
-button:hover,
+button:not(.dashboard-toggle-btn):not(.chart-toggle-btn):hover,
 input[type="submit"]:hover {
     background-color: #5a6b77;
     /* Darker shade on hover */
@@ -1011,13 +1011,13 @@ input#weight, input#reps {
 .dashboard-toggle-btn {
     position: absolute;
     right: 20px;
-    display: flex !important;
+    display: flex;
     align-items: center;
     gap: 8px;
-    padding: 8px 16px !important;
-    background: rgba(255, 255, 255, 0.15) !important;
-    border: 1px solid rgba(255, 255, 255, 0.3) !important;
-    border-radius: 25px !important;
+    padding: 8px 16px;
+    background: rgba(255, 255, 255, 0.15);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    border-radius: 25px;
     color: white;
     cursor: pointer;
     transition: all 0.3s ease;
@@ -1025,19 +1025,19 @@ input#weight, input#reps {
     font-size: 14px;
     font-weight: 500;
     backdrop-filter: blur(4px);
-    height: auto !important;
-    margin-top: 0 !important;
-    width: auto !important;
+    height: auto;
+    margin-top: 0;
+    width: auto;
 }
 
 .dashboard-toggle-btn:hover {
-    background: rgba(255, 255, 255, 0.25) !important;
+    background: rgba(255, 255, 255, 0.25);
     transform: scale(1.02);
 }
 
 .dashboard-toggle-btn.active {
-    background: #3b82f6 !important;
-    border-color: #3b82f6 !important;
+    background: #3b82f6;
+    border-color: #3b82f6;
     box-shadow: 0 2px 12px rgba(59, 130, 246, 0.4);
 }
 
@@ -1056,7 +1056,7 @@ input#weight, input#reps {
 
 /* Dashboard mode - hide left side and expand charts */
 body.dashboard-mode .left-side {
-    display: none !important;
+    display: none;
 }
 
 body.dashboard-mode .container {
