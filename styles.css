@@ -1068,7 +1068,7 @@ body.dashboard-mode .right-side {
     width: 100%;
     max-width: 100%;
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(450px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(600px, 1fr));
     gap: 24px;
     padding: 20px;
     background: transparent;
@@ -1093,6 +1093,12 @@ body.dashboard-mode #calendar.chart-container {
 }
 
 /* Dashboard mode responsive adjustments */
+@media (max-width: 1400px) {
+    body.dashboard-mode .right-side {
+        grid-template-columns: repeat(auto-fit, minmax(450px, 1fr));
+    }
+}
+
 @media (max-width: 1200px) {
     body.dashboard-mode .right-side {
         grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
