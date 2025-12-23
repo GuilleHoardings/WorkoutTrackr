@@ -53,6 +53,7 @@ class ChartManager {
 
             this.createRepsPerMinuteChart(exerciseTypes, uniqueDates, options);
             this.createMonthlyChart();
+            this.createExerciseDistributionChart();
             this.createWeeklySummaryChart();
             this.createPersonalRecordsChart();
             this.createConsistencyChart();
@@ -537,6 +538,11 @@ class ChartManager {
             // Update monthly chart
             this.updateChartData('monthly', () => this.prepareMonthlyChartData());
 
+            // Update exercise distribution chart and legend
+            const distData = this.prepareExerciseDistributionData();
+            this.updateChartData('exerciseDistribution', () => distData);
+            this.updateExerciseDistributionLegend(distData);
+
             // Update activity chart
             this.createActivityChart();
 
@@ -798,7 +804,122 @@ class ChartManager {
             labels: allMonths,
             datasets: monthlyDatasets
         };
-    }    /**
+    }
+
+    /**
+     * Create exercise distribution donut chart showing proportion of total reps per exercise
+     */
+    createExerciseDistributionChart() {
+        const distData = this.prepareExerciseDistributionData();
+        const canvas = document.getElementById('exercise-distribution-chart');
+
+        if (!canvas) {
+            console.warn("Exercise distribution chart canvas not found");
+            return;
+        }
+
+        const options = this.getChartOptions('Exercise Distribution', {
+            plugins: {
+                legend: { position: 'right', labels: { usePointStyle: true, padding: 12 } },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            const label = context.label || '';
+                            const value = context.parsed || 0;
+                            return `${label}: ${value} reps`;
+                        }
+                    }
+                }
+            },
+            animation: { duration: 1200, easing: 'easeInOutQuart' }
+        });
+
+        const chart = this.createChart(canvas, 'doughnut', distData, {
+            options: {
+                ...options,
+                cutout: '60%'
+            }
+        });
+
+        this.charts.set('exerciseDistribution', chart);
+
+        // Update an accessible legend area if present
+        this.updateExerciseDistributionLegend(distData);
+    }
+
+    /**
+     * Aggregate total reps per exercise and prepare data for the donut chart
+     */
+    prepareExerciseDistributionData() {
+        const workouts = this.dataManager.getAllWorkouts();
+        if (!workouts || workouts.length === 0) {
+            return { labels: [], datasets: [] };
+        }
+
+        const totals = {};
+        workouts.forEach(w => {
+            const exercise = w.exercise || 'Unknown';
+            const reps = w.totalReps || 0;
+            totals[exercise] = (totals[exercise] || 0) + reps;
+        });
+
+        const entries = Object.keys(totals).map(k => ({ exercise: k, reps: totals[k] }))
+            .sort((a, b) => b.reps - a.reps);
+
+        // Limit slices and combine smaller slices into 'Other' for clarity
+        const maxSlices = 6;
+        let labels = [];
+        let data = [];
+
+        if (entries.length <= maxSlices) {
+            labels = entries.map(e => e.exercise);
+            data = entries.map(e => e.reps);
+        } else {
+            const top = entries.slice(0, maxSlices - 1);
+            const rest = entries.slice(maxSlices - 1);
+            const otherSum = rest.reduce((s, e) => s + e.reps, 0);
+            labels = top.map(e => e.exercise);
+            data = top.map(e => e.reps);
+            labels.push('Other');
+            data.push(otherSum);
+        }
+
+        const backgroundColor = labels.map((label, idx) => {
+            if (label === 'Other') return '#9CA3AF';
+            const base = this.getExerciseBaseColor(label, idx);
+            return ColorUtils.convertToValidColor(base);
+        });
+
+        return {
+            labels: labels,
+            datasets: [
+                {
+                    data: data,
+                    backgroundColor: backgroundColor,
+                    hoverOffset: 8
+                }
+            ]
+        };
+    }
+
+    /**
+     * Update the DOM legend for exercise distribution chart
+     */
+    updateExerciseDistributionLegend(distData) {
+        const legendEl = document.getElementById('exercise-distribution-legend');
+        if (!legendEl) return;
+        legendEl.innerHTML = '';
+        const bgColors = (distData.datasets && distData.datasets[0] && distData.datasets[0].backgroundColor) || [];
+        distData.labels.forEach((label, i) => {
+            const color = bgColors[i] || '#9CA3AF';
+            const item = document.createElement('div');
+            item.className = 'legend-item';
+            item.innerHTML = `<span class="legend-dot" style="background:${color}"></span><span class="legend-label">${label}</span>`;
+            legendEl.appendChild(item);
+        });
+    }
+
+    /**
      * Prepare activity chart data
      */
     prepareActivityChartData() {
