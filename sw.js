@@ -1,4 +1,4 @@
-const CACHE_NAME = 'workouttrackr-v5';
+const CACHE_NAME = 'workouttrackr-v6';
 const urlsToCache = [
   './styles.css',
   './pushup.png',
