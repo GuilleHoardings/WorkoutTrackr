@@ -173,8 +173,8 @@ input#weight {
     box-sizing: border-box;
 }
 
-/* Button styling - apply to primary action buttons via class, plus submit inputs */
-.btn-primary,
+/* Button styling - excludes special buttons like dashboard toggle and utility buttons */
+button:not(.dashboard-toggle-btn):not(.chart-toggle-btn):not(.edit-date-btn):not(.edit-series-btn):not(.delete-series-btn):not(.save-edit-btn):not(.cancel-edit-btn):not(.delete-exercise-btn):not(.reset-btn),
 input[type="submit"] {
     padding: 12px 20px;
     /* Ensuring both buttons have the same padding */
