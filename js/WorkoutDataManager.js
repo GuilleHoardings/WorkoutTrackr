@@ -215,6 +215,39 @@ class WorkoutDataManager {
     }
 
     /**
+     * Update an existing series in a workout and recalculate totals
+     * @param {string} workoutId - Workout identifier (timestamp as string)
+     * @param {number} seriesIndex - Index of the series to update
+     * @param {number} reps - New number of reps
+     * @param {number|null} weight - New weight used
+     * @returns {Object} The updated workout
+     */
+    updateSeries(workoutId, seriesIndex, reps, weight) {
+        const workoutIndex = this.workoutsData.findIndex(workout =>
+            new Date(workout.date).getTime().toString() === workoutId
+        );
+
+        if (workoutIndex === -1) {
+            throw new Error("Workout not found");
+        }
+
+        const workout = this.workoutsData[workoutIndex];
+
+        if (seriesIndex < 0 || seriesIndex >= workout.series.length) {
+            throw new Error("Series index out of bounds");
+        }
+
+        // Update the series
+        workout.series[seriesIndex].reps = reps;
+        workout.series[seriesIndex].weight = weight !== null && !isNaN(weight) ? weight : null;
+
+        // Recalculate total reps
+        workout.totalReps = workout.series.reduce((sum, s) => sum + s.reps, 0);
+
+        return workout;
+    }
+
+    /**
      * Get all workouts data
      * @returns {Array} Array of all workouts
      */

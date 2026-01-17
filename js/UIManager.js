@@ -188,13 +188,22 @@ class UIManager {
      */
     createSeriesListHtml(series, workoutId) {
         let seriesHtml = '<ul class="series-list">';
-        series.forEach((series, index) => {
-            const seriesTime = new Date(series.timestamp);
-            const weightDisplay = series.weight ? `${series.weight} kg` : 'Bodyweight';
+        series.forEach((seriesItem, index) => {
+            const seriesTime = new Date(seriesItem.timestamp);
+            const weightDisplay = seriesItem.weight ? `${seriesItem.weight} kg` : 'Bodyweight';
             seriesHtml += `
-                <li class="series-item">
-                    <span class="series-info">Series ${index + 1}: ${series.reps} reps - ${weightDisplay} - ${seriesTime.toLocaleTimeString()}</span>
-                    <button class="delete-series-btn" data-workout-id="${workoutId}" data-series-index="${index}" title="Delete this series">×</button>
+                <li class="series-item" data-workout-id="${workoutId}" data-series-index="${index}">
+                    <span class="series-info">Series ${index + 1}: ${seriesItem.reps} reps - ${weightDisplay} - ${seriesTime.toLocaleTimeString()}</span>
+                    <div class="edit-series-form">
+                        <input type="number" class="edit-series-input reps" value="${seriesItem.reps}" min="1" max="500">
+                        <input type="number" class="edit-series-input weight" value="${seriesItem.weight || ''}" placeholder="Bodyweight" step="0.5" min="0" max="500">
+                        <button class="save-edit-btn" title="Save changes">Save</button>
+                        <button class="cancel-edit-btn" title="Cancel editing">Cancel</button>
+                    </div>
+                    <div class="series-actions">
+                        <button class="edit-series-btn" data-workout-id="${workoutId}" data-series-index="${index}" title="Edit this series">✎</button>
+                        <button class="delete-series-btn" data-workout-id="${workoutId}" data-series-index="${index}" title="Delete this series">×</button>
+                    </div>
                 </li>`;
         });
         seriesHtml += '</ul>';
@@ -215,6 +224,8 @@ class UIManager {
 
         // Also setup delete listeners
         this.setupDeleteListeners();
+        // Also setup edit listeners
+        this.setupEditListeners();
     }
 
     /**
@@ -319,6 +330,88 @@ class UIManager {
             button.removeEventListener('click', this.handleDeleteSeries);
             button.addEventListener('click', this.handleDeleteSeries.bind(this));
         });
+    }
+
+    /**
+     * Setup event listeners for editing series
+     */
+    setupEditListeners() {
+        const editButtons = document.querySelectorAll('.edit-series-btn');
+        const saveButtons = document.querySelectorAll('.save-edit-btn');
+        const cancelButtons = document.querySelectorAll('.cancel-edit-btn');
+
+        editButtons.forEach(button => {
+            button.removeEventListener('click', this.handleEditSeries);
+            button.addEventListener('click', this.handleEditSeries.bind(this));
+        });
+
+        saveButtons.forEach(button => {
+            button.removeEventListener('click', this.handleSaveEdit);
+            button.addEventListener('click', this.handleSaveEdit.bind(this));
+        });
+
+        cancelButtons.forEach(button => {
+            button.removeEventListener('click', this.handleCancelEdit);
+            button.addEventListener('click', this.handleCancelEdit.bind(this));
+        });
+    }
+
+    /**
+     * Handle entering edit mode for a series
+     * @param {Event} event - Click event from edit button
+     */
+    handleEditSeries(event) {
+        event.stopPropagation(); // Prevent the workout item from toggling
+        const seriesItem = event.target.closest('.series-item');
+        seriesItem.classList.add('edit-mode');
+    }
+
+    /**
+     * Handle saving edited series
+     * @param {Event} event - Click event from save button
+     */
+    async handleSaveEdit(event) {
+        event.stopPropagation();
+        const seriesItem = event.target.closest('.series-item');
+        const workoutId = seriesItem.dataset.workoutId;
+        const seriesIndex = parseInt(seriesItem.dataset.seriesIndex);
+        
+        const repsInput = seriesItem.querySelector('.edit-series-input.reps');
+        const weightInput = seriesItem.querySelector('.edit-series-input.weight');
+        
+        const reps = parseInt(repsInput.value);
+        const weightValue = weightInput.value;
+        const weight = weightValue.trim() === '' ? null : parseFloat(weightValue);
+
+        if (isNaN(reps) || reps <= 0) {
+            this.notificationManager.showError('Please enter a valid number of repetitions');
+            return;
+        }
+
+        try {
+            this.dataManager.updateSeries(workoutId, seriesIndex, reps, weight);
+            await this.dataManager.saveWorkoutData();
+            this.notificationManager.showSuccess('Series updated successfully');
+            
+            if (this.refreshCallback) {
+                this.refreshCallback();
+            } else {
+                this.updateWorkoutTable();
+            }
+        } catch (error) {
+            console.error('Error updating series:', error);
+            this.notificationManager.showError('Failed to update series');
+        }
+    }
+
+    /**
+     * Handle cancelling edit mode
+     * @param {Event} event - Click event from cancel button
+     */
+    handleCancelEdit(event) {
+        event.stopPropagation();
+        const seriesItem = event.target.closest('.series-item');
+        seriesItem.classList.remove('edit-mode');
     }
 
     /**
