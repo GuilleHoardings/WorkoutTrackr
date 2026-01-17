@@ -135,7 +135,7 @@ class WorkoutDataManager {
             const newSeries = {
                 reps: reps,
                 weight: weight,
-                timestamp: newEntryTime
+                timestamp: newEntryTime.toISOString()
             };
 
             existingWorkout.series.push(newSeries);
@@ -152,13 +152,13 @@ class WorkoutDataManager {
         } else {
             // Create a new workout for today
             const newWorkout = {
-                date: newEntryTime,
+                date: newEntryTime.toISOString(),
                 dateString: dateString,
                 exercise: exercise,
                 series: [{
                     reps: reps,
                     weight: weight,
-                    timestamp: newEntryTime
+                    timestamp: newEntryTime.toISOString()
                 }],
                 totalTime: 0, // First series, so no time elapsed yet
                 totalReps: reps
@@ -167,6 +167,37 @@ class WorkoutDataManager {
             this.workoutsData.push(newWorkout);
             return newWorkout;
         }
+    }
+
+    /**
+     * Recalculate totals for a workout (totalReps, totalTime, etc.)
+     * @param {Object} workout - The workout to update
+     */
+    recalculateWorkoutTotals(workout) {
+        if (!workout.series || workout.series.length === 0) {
+            workout.totalReps = 0;
+            workout.totalTime = 0;
+            return;
+        }
+
+        // Sort series by timestamp to ensure chronological order
+        workout.series.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+
+        // Recalculate total reps
+        workout.totalReps = workout.series.reduce((sum, s) => sum + s.reps, 0);
+
+        // Recalculate total time between first and last series
+        if (workout.series.length > 1) {
+            const firstSeriesTime = new Date(workout.series[0].timestamp).getTime();
+            const lastSeriesTime = new Date(workout.series[workout.series.length - 1].timestamp).getTime();
+            workout.totalTime = Math.round((lastSeriesTime - firstSeriesTime) / 60000);
+        } else {
+            workout.totalTime = 0;
+        }
+
+        // Update the main workout date and dateString to match the first series
+        workout.date = workout.series[0].timestamp;
+        workout.dateString = new Date(workout.date).toISOString().split('T')[0];
     }
 
     /**
@@ -200,16 +231,7 @@ class WorkoutDataManager {
         workout.series.splice(seriesIndex, 1);
 
         // Recalculate totals
-        workout.totalReps = workout.series.reduce((sum, series) => sum + series.reps, 0);
-
-        // Recalculate total time between first and last series
-        if (workout.series.length > 1) {
-            const firstSeriesTime = new Date(workout.series[0].timestamp).getTime();
-            const lastSeriesTime = new Date(workout.series[workout.series.length - 1].timestamp).getTime();
-            workout.totalTime = Math.round((lastSeriesTime - firstSeriesTime) / 60000);
-        } else {
-            workout.totalTime = 0; // Only one series remaining
-        }
+        this.recalculateWorkoutTotals(workout);
 
         return true; // Indicates series was deleted but workout remains
     }
@@ -220,9 +242,10 @@ class WorkoutDataManager {
      * @param {number} seriesIndex - Index of the series to update
      * @param {number} reps - New number of reps
      * @param {number|null} weight - New weight used
-     * @returns {Object} The updated workout
+     * @param {Date|null} newTimestamp - Optional new timestamp for the series
+     * @returns {Object} The updated (or new) workout
      */
-    updateSeries(workoutId, seriesIndex, reps, weight) {
+    updateSeries(workoutId, seriesIndex, reps, weight, newTimestamp = null) {
         const workoutIndex = this.workoutsData.findIndex(workout =>
             new Date(workout.date).getTime().toString() === workoutId
         );
@@ -237,14 +260,140 @@ class WorkoutDataManager {
             throw new Error("Series index out of bounds");
         }
 
-        // Update the series
-        workout.series[seriesIndex].reps = reps;
-        workout.series[seriesIndex].weight = weight !== null && !isNaN(weight) ? weight : null;
+        // Update the series data
+        const series = workout.series[seriesIndex];
+        
+        if (newTimestamp) {
+            const oldTimestamp = new Date(series.timestamp);
+            const oldDateString = oldTimestamp.toISOString().split('T')[0];
+            const newDateString = newTimestamp.toISOString().split('T')[0];
 
-        // Recalculate total reps
-        workout.totalReps = workout.series.reduce((sum, s) => sum + s.reps, 0);
+            if (oldDateString !== newDateString) {
+                // The date has changed, create a new series object and move it
+                const movedSeries = {
+                    ...series,
+                    reps: reps,
+                    weight: weight !== null && !isNaN(weight) ? weight : null,
+                    timestamp: newTimestamp.toISOString()
+                };
 
-        return workout;
+                // 1. Remove from current workout
+                workout.series.splice(seriesIndex, 1);
+                
+                // 2. If current workout is now empty, remove it
+                if (workout.series.length === 0) {
+                    this.workoutsData.splice(workoutIndex, 1);
+                } else {
+                    // Otherwise update original workout's totals
+                    this.recalculateWorkoutTotals(workout);
+                }
+
+                // 3. Find or create a workout on the new date
+                let targetWorkout = this.workoutsData.find(w => 
+                    w.dateString === newDateString && 
+                    w.exercise === workout.exercise
+                );
+
+                if (targetWorkout) {
+                    // Add to existing workout
+                    targetWorkout.series.push(movedSeries);
+                    this.recalculateWorkoutTotals(targetWorkout);
+                    return targetWorkout;
+                } else {
+                    // Create new workout for this date
+                    const newWorkout = {
+                        date: newTimestamp.toISOString(),
+                        dateString: newDateString,
+                        exercise: workout.exercise,
+                        series: [movedSeries],
+                        totalTime: 0,
+                        totalReps: movedSeries.reps
+                    };
+                    this.workoutsData.push(newWorkout);
+                    // Keep workouts sorted by date (newest first)
+                    this.workoutsData.sort((a, b) => new Date(b.date) - new Date(a.date));
+                    return newWorkout;
+                }
+            } else {
+                // Same day, update in place
+                series.reps = reps;
+                series.weight = weight !== null && !isNaN(weight) ? weight : null;
+                series.timestamp = newTimestamp.toISOString();
+                this.recalculateWorkoutTotals(workout);
+                return workout;
+            }
+        } else {
+            // No timestamp change, update in place
+            series.reps = reps;
+            series.weight = weight !== null && !isNaN(weight) ? weight : null;
+            this.recalculateWorkoutTotals(workout);
+            return workout;
+        }
+    }
+
+    /**
+     * Update the date of a workout
+     * @param {string} workoutId - Workout identifier (timestamp as string)
+     * @param {Date} newDate - The new date for the workout
+     * @returns {Object} The updated (or merged) workout
+     */
+    updateWorkoutDate(workoutId, newDate) {
+        const workoutIndex = this.workoutsData.findIndex(workout =>
+            new Date(workout.date).getTime().toString() === workoutId
+        );
+
+        if (workoutIndex === -1) {
+            throw new Error("Workout not found");
+        }
+
+        const workout = this.workoutsData[workoutIndex];
+        const newDateString = newDate.toISOString().split('T')[0];
+
+        // Check if another workout for the same exercise already exists on the new date
+        // (and it's not the same workout entry)
+        const existingWorkout = this.workoutsData.find(w =>
+            w.dateString === newDateString &&
+            w.exercise === workout.exercise &&
+            new Date(w.date).getTime().toString() !== workoutId
+        );
+
+        if (existingWorkout) {
+            // Merge this workout into the existing one
+            workout.series.forEach(s => {
+                // Update timestamp for the series to match the new date but preserve time
+                const seriesTime = new Date(s.timestamp);
+                const updatedSeriesTime = new Date(newDate);
+                updatedSeriesTime.setHours(seriesTime.getHours());
+                updatedSeriesTime.setMinutes(seriesTime.getMinutes());
+                updatedSeriesTime.setSeconds(seriesTime.getSeconds());
+                updatedSeriesTime.setMilliseconds(seriesTime.getMilliseconds());
+                s.timestamp = updatedSeriesTime.toISOString();
+                
+                existingWorkout.series.push(s);
+            });
+
+            // Recalculate totals and sort series
+            this.recalculateWorkoutTotals(existingWorkout);
+
+            // Remove the old workout entry
+            this.workoutsData.splice(workoutIndex, 1);
+            return existingWorkout;
+        } else {
+            // No conflict, update the date by updating all series timestamps
+            workout.series.forEach(s => {
+                const seriesTime = new Date(s.timestamp);
+                const updatedSeriesTime = new Date(newDate);
+                updatedSeriesTime.setHours(seriesTime.getHours());
+                updatedSeriesTime.setMinutes(seriesTime.getMinutes());
+                updatedSeriesTime.setSeconds(seriesTime.getSeconds());
+                updatedSeriesTime.setMilliseconds(seriesTime.getMilliseconds());
+                s.timestamp = updatedSeriesTime.toISOString();
+            });
+
+            // Recalculate everything (this updates workout.date and workout.dateString)
+            this.recalculateWorkoutTotals(workout);
+            return workout;
+        }
     }
 
     /**

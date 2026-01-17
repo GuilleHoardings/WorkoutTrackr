@@ -27,13 +27,14 @@ body {
     .top-controls-row .csv-controls { flex-direction: row; flex-wrap: wrap; width: 100%; }
     .form-controls-row { flex-direction: column; align-items: stretch; }
     .form-controls-row .form-group { min-width: 100%; width: 100%; }
-    button, input[type="submit"] { width: 100%; }
+    button:not(.edit-date-btn):not(.edit-series-btn):not(.delete-series-btn):not(.save-edit-btn):not(.cancel-edit-btn):not(.delete-exercise-btn):not(.reset-btn), 
+    input[type="submit"] { width: 100%; }
     select#exercise-select, input#weight, input#reps { width: 100%; }
     .form-controls-row select#exercise-select,
     .form-controls-row input[type="number"],
     .form-controls-row input#weight,
     .form-controls-row input#reps,
-    .form-controls-row button,
+    .form-controls-row button:not(.edit-date-btn):not(.edit-series-btn):not(.delete-series-btn):not(.save-edit-btn):not(.cancel-edit-btn):not(.delete-exercise-btn):not(.reset-btn),
     .form-controls-row input[type="submit"] { width: 100% !important; }
     #logo { width: 56px; }
     h1 { font-size: 22px; padding: 12px; }
@@ -172,8 +173,8 @@ input#weight {
     box-sizing: border-box;
 }
 
-/* Button styling - excludes special buttons like dashboard toggle */
-button:not(.dashboard-toggle-btn):not(.chart-toggle-btn),
+/* Button styling - apply to primary action buttons via class, plus submit inputs */
+.btn-primary,
 input[type="submit"] {
     padding: 12px 20px;
     /* Ensuring both buttons have the same padding */
@@ -198,7 +199,7 @@ input[type="submit"] {
     /* Vertically aligning content */
 }
 
-button:not(.dashboard-toggle-btn):not(.chart-toggle-btn):hover,
+button:not(.dashboard-toggle-btn):not(.chart-toggle-btn):not(.edit-date-btn):not(.edit-series-btn):not(.delete-series-btn):not(.save-edit-btn):not(.cancel-edit-btn):not(.delete-exercise-btn):not(.reset-btn):hover,
 input[type="submit"]:hover {
     background-color: #5a6b77;
     /* Darker shade on hover */
@@ -406,7 +407,8 @@ div#calendar.chart-container {
 }
 
 /* Miscellaneous improvements */
-button, input[type="submit"] {
+button:not(.edit-date-btn):not(.edit-series-btn):not(.delete-series-btn):not(.save-edit-btn):not(.cancel-edit-btn):not(.delete-exercise-btn):not(.reset-btn), 
+input[type="submit"] {
     width: auto;
 }
 
@@ -696,13 +698,13 @@ input#weight, input#reps {
     color: white;
     border: none;
     border-radius: 50%;
-    width: 22px;
-    height: 22px;
-    min-width: 22px;
-    min-height: 22px;
-    max-width: 22px;
-    max-height: 22px;
-    font-size: 18px;
+    width: 18px;
+    height: 18px;
+    min-width: 18px;
+    min-height: 18px;
+    max-width: 18px;
+    max-height: 18px;
+    font-size: 14px;
     font-weight: normal;
     font-family: 'Courier New', monospace;
     line-height: 1;
@@ -711,7 +713,7 @@ input#weight, input#reps {
     align-items: center;
     justify-content: center;
     align-self: center;
-    margin: 0 0 0 10px;
+    margin: 0 0 0 6px;
     transition: all 0.2s ease;
     flex-shrink: 0;
     flex-grow: 0;
@@ -746,13 +748,13 @@ input#weight, input#reps {
     color: white;
     border: none;
     border-radius: 50%;
-    width: 22px;
-    height: 22px;
-    min-width: 22px;
-    min-height: 22px;
-    max-width: 22px;
-    max-height: 22px;
-    font-size: 14px;
+    width: 18px;
+    height: 18px;
+    min-width: 18px;
+    min-height: 18px;
+    max-width: 18px;
+    max-height: 18px;
+    font-size: 11px;
     font-weight: normal;
     line-height: 1;
     cursor: pointer;
@@ -785,19 +787,90 @@ input#weight, input#reps {
     box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
 }
 
+.workout-detail.date {
+    position: relative;
+}
+
+.edit-date-btn {
+    position: absolute;
+    right: 4px;
+    top: 50%;
+    transform: translateY(-50%);
+    background: transparent;
+    border: none;
+    color: #6c7b8b;
+    cursor: pointer;
+    font-size: 11px;
+    padding: 1px;
+    opacity: 0;
+    transition: all 0.2s ease;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    height: 18px;
+    width: 18px;
+    box-sizing: border-box;
+    margin: 0;
+}
+
+.workout-item:hover .edit-date-btn {
+    opacity: 0.5;
+}
+
+.edit-date-btn:hover {
+    opacity: 1 !important;
+    color: #2196F3;
+    transform: translateY(-50%) scale(1.2);
+}
+
+.workout-date-input {
+    font-family: inherit;
+    font-size: 14px;
+    padding: 2px 5px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    color: #333;
+    background-color: white;
+}
+
 .edit-mode .series-info {
     display: none;
 }
 
 .edit-series-form {
     display: none;
-    align-items: center;
+    flex-direction: column;
     gap: 10px;
     flex-grow: 1;
+    width: 100%;
 }
 
 .edit-mode .edit-series-form {
     display: flex;
+}
+
+.edit-series-inputs {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    align-items: flex-end;
+}
+
+.edit-series-field {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.edit-series-field label {
+    font-size: 12px;
+    font-weight: bold;
+    color: var(--text-color);
+}
+
+.edit-series-actions {
+    display: flex;
+    gap: 8px;
 }
 
 .series-actions {
@@ -822,6 +895,10 @@ input#weight, input#reps {
 
 .edit-series-input.weight {
     width: 80px;
+}
+
+.edit-series-input.timestamp {
+    width: 190px;
 }
 
 .save-edit-btn, .cancel-edit-btn {

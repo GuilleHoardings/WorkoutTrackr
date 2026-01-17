@@ -1,4 +1,4 @@
-const CACHE_NAME = 'workouttrackr-v6';
+const CACHE_NAME = 'workouttrackr-v10';
 const urlsToCache = [
   './styles.css',
   './pushup.png',
@@ -10,6 +10,7 @@ const urlsToCache = [
 // Install event - cache resources
 self.addEventListener('install', event => {
   console.log('Service Worker installing...');
+  self.skipWaiting();
   event.waitUntil(
     caches.open(CACHE_NAME)
       .then(cache => {

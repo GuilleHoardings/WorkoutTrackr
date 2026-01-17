@@ -126,7 +126,30 @@ class UIManager {
         // Format date
         const dateDetail = document.createElement('div');
         dateDetail.className = 'workout-detail date';
-        dateDetail.textContent = this.createLongFormattedDate(new Date(workout.date));
+        
+        const dateText = document.createElement('span');
+        dateText.className = 'date-text';
+        dateText.textContent = this.createLongFormattedDate(new Date(workout.date));
+        
+        const dateInput = document.createElement('input');
+        dateInput.type = 'date';
+        dateInput.className = 'workout-date-input';
+        dateInput.style.display = 'none';
+        // Format to YYYY-MM-DD for the date input
+        const dateObj = new Date(workout.date);
+        const yyyy = dateObj.getFullYear();
+        const mm = String(dateObj.getMonth() + 1).padStart(2, '0');
+        const dd = String(dateObj.getDate()).padStart(2, '0');
+        dateInput.value = `${yyyy}-${mm}-${dd}`;
+        
+        const editDateBtn = document.createElement('button');
+        editDateBtn.className = 'edit-date-btn';
+        editDateBtn.innerHTML = '✎';
+        editDateBtn.title = 'Edit workout date';
+        
+        dateDetail.appendChild(dateText);
+        dateDetail.appendChild(dateInput);
+        dateDetail.appendChild(editDateBtn);
 
         // Exercise type
         const exerciseDetail = document.createElement('div');
@@ -191,14 +214,26 @@ class UIManager {
         series.forEach((seriesItem, index) => {
             const seriesTime = new Date(seriesItem.timestamp);
             const weightDisplay = seriesItem.weight ? `${seriesItem.weight} kg` : 'Bodyweight';
+            
+            // Format for datetime-local input: YYYY-MM-DDThh:mm
+            const year = seriesTime.getFullYear();
+            const month = String(seriesTime.getMonth() + 1).padStart(2, '0');
+            const day = String(seriesTime.getDate()).padStart(2, '0');
+            const hours = String(seriesTime.getHours()).padStart(2, '0');
+            const minutes = String(seriesTime.getMinutes()).padStart(2, '0');
+            const datetimeValue = `${year}-${month}-${day}T${hours}:${minutes}`;
+
             seriesHtml += `
                 <li class="series-item" data-workout-id="${workoutId}" data-series-index="${index}">
                     <span class="series-info">Series ${index + 1}: ${seriesItem.reps} reps - ${weightDisplay} - ${seriesTime.toLocaleTimeString()}</span>
                     <div class="edit-series-form">
-                        <input type="number" class="edit-series-input reps" value="${seriesItem.reps}" min="1" max="500">
-                        <input type="number" class="edit-series-input weight" value="${seriesItem.weight || ''}" placeholder="Bodyweight" step="0.5" min="0" max="500">
-                        <button class="save-edit-btn" title="Save changes">Save</button>
-                        <button class="cancel-edit-btn" title="Cancel editing">Cancel</button>
+                        <input type="number" class="edit-series-input reps" value="${seriesItem.reps}" min="1" max="500" title="Repetitions">
+                        <input type="number" class="edit-series-input weight" value="${seriesItem.weight || ''}" placeholder="Bodyweight" step="0.5" min="0" max="500" title="Weight (kg)">
+                        <input type="datetime-local" class="edit-series-input timestamp" value="${datetimeValue}" title="Date and Time">
+                        <div class="edit-series-actions">
+                            <button class="save-edit-btn" title="Save changes">Save</button>
+                            <button class="cancel-edit-btn" title="Cancel editing">Cancel</button>
+                        </div>
                     </div>
                     <div class="series-actions">
                         <button class="edit-series-btn" data-workout-id="${workoutId}" data-series-index="${index}" title="Edit this series">✎</button>
@@ -226,6 +261,8 @@ class UIManager {
         this.setupDeleteListeners();
         // Also setup edit listeners
         this.setupEditListeners();
+        // Setup date edit listeners
+        this.setupDateEditListeners();
     }
 
     /**
@@ -357,6 +394,94 @@ class UIManager {
     }
 
     /**
+     * Setup event listeners for editing workout dates
+     */
+    setupDateEditListeners() {
+        const editDateBtns = document.querySelectorAll('.edit-date-btn');
+        const dateInputs = document.querySelectorAll('.workout-date-input');
+
+        editDateBtns.forEach(btn => {
+            btn.removeEventListener('click', this.handleEditDateClick);
+            btn.addEventListener('click', this.handleEditDateClick.bind(this));
+        });
+
+        dateInputs.forEach(input => {
+            input.removeEventListener('change', this.handleDateChange);
+            input.removeEventListener('blur', this.handleDateBlur);
+            input.addEventListener('change', this.handleDateChange.bind(this));
+            input.addEventListener('blur', this.handleDateBlur.bind(this));
+        });
+    }
+
+    /**
+     * Handle click on edit date button
+     * @param {Event} event - Click event
+     */
+    handleEditDateClick(event) {
+        event.stopPropagation();
+        const dateDetail = event.currentTarget.closest('.workout-detail.date');
+        const dateText = dateDetail.querySelector('.date-text');
+        const dateInput = dateDetail.querySelector('.workout-date-input');
+        const editBtn = dateDetail.querySelector('.edit-date-btn');
+
+        dateText.style.display = 'none';
+        editBtn.style.display = 'none';
+        dateInput.style.display = 'inline-block';
+        dateInput.focus();
+    }
+
+    /**
+     * Handle date input change
+     * @param {Event} event - Change event
+     */
+    async handleDateChange(event) {
+        const dateInput = event.target;
+        const workoutItem = dateInput.closest('.workout-item');
+        const workoutId = workoutItem.dataset.id;
+        const newDateVal = dateInput.value;
+
+        if (!newDateVal) return;
+
+        try {
+            // Split YYYY-MM-DD and create local date to avoid UTC shifting
+            const [y, m, d] = newDateVal.split('-').map(Number);
+            const newDate = new Date();
+            newDate.setFullYear(y);
+            newDate.setMonth(m - 1);
+            newDate.setDate(d);
+            
+            this.dataManager.updateWorkoutDate(workoutId, newDate);
+            await this.dataManager.saveWorkoutData();
+            
+            this.notificationManager.showSuccess('Workout date updated');
+            
+            // Give it a moment before refreshing to ensure state is clean
+            setTimeout(() => {
+                if (this.refreshCallback) {
+                    this.refreshCallback();
+                } else {
+                    this.refreshUI();
+                }
+            }, 100);
+        } catch (error) {
+            console.error('Error updating workout date:', error);
+            this.notificationManager.showError('Failed to update workout date');
+            this.refreshUI();
+        }
+    }
+
+    /**
+     * Handle date input blur (cancel edit if no change)
+     * @param {Event} event - Blur event
+     */
+    handleDateBlur(event) {
+        // Delay slightly to allow change event to fire first if it was a change
+        setTimeout(() => {
+            this.refreshUI();
+        }, 200);
+    }
+
+    /**
      * Handle entering edit mode for a series
      * @param {Event} event - Click event from edit button
      */
@@ -378,10 +503,12 @@ class UIManager {
         
         const repsInput = seriesItem.querySelector('.edit-series-input.reps');
         const weightInput = seriesItem.querySelector('.edit-series-input.weight');
+        const timestampInput = seriesItem.querySelector('.edit-series-input.timestamp');
         
         const reps = parseInt(repsInput.value);
         const weightValue = weightInput.value;
-        const weight = weightValue.trim() === '' ? null : parseFloat(weightValue);
+        const weight = (weightValue === null || weightValue === undefined || weightValue.trim() === '') ? null : parseFloat(weightValue);
+        const timestamp = timestampInput.value ? new Date(timestampInput.value) : null;
 
         if (isNaN(reps) || reps <= 0) {
             this.notificationManager.showError('Please enter a valid number of repetitions');
@@ -389,7 +516,7 @@ class UIManager {
         }
 
         try {
-            this.dataManager.updateSeries(workoutId, seriesIndex, reps, weight);
+            this.dataManager.updateSeries(workoutId, seriesIndex, reps, weight, timestamp);
             await this.dataManager.saveWorkoutData();
             this.notificationManager.showSuccess('Series updated successfully');
             
