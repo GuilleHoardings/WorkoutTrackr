@@ -46,14 +46,14 @@ class ShareManager {
         });
         const packed = { v: 1, t: optimizedObj.t, d: dates, e: exercises, x: optimizedObj.x || [], w: packedWorkouts };
         const json = JSON.stringify(packed);
-        const b64 = btoa(json).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
+        const b64 = btoa(json).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
         return 'C1' + b64; // prefix for format identification
     }
 
     // Decompresses a compressed URL-safe string back into the optimized object (simpler contract)
     decompressToOptimized(compressed) {
         if (!compressed.startsWith('C1')) throw new Error('Unsupported compressed data');
-        let b64 = compressed.slice(2).replace(/-/g,'+').replace(/_/g,'/');
+        let b64 = compressed.slice(2).replace(/-/g, '+').replace(/_/g, '/');
         while (b64.length % 4) b64 += '=';
         const json = atob(b64);
         const packed = JSON.parse(json);
@@ -143,12 +143,7 @@ class ShareManager {
     }
 
     logCompressionStats(stats, shareUrl) {
-        console.log(`Compression stats:\n` +
-            `  Original: ${stats.originalSize} chars (${(stats.originalSize / 1024).toFixed(1)}KB)\n` +
-            `  Optimized: ${stats.optimizedSize} chars (${(stats.optimizedSize / 1024).toFixed(1)}KB)\n` +
-            `  Compressed: ${stats.compressedSize} chars (${(stats.compressedSize / 1024).toFixed(1)}KB)\n` +
-            `  Saved: ${stats.compressionRatio}%\n` +
-            `  URL length: ${shareUrl.length} chars`);
+        // Debug logging removed for production
     }
 
     async shareData() {
@@ -178,7 +173,6 @@ class ShareManager {
                 `Share link copied! Compressed ${stats.compressionRatio}% (${stats.workouts} workouts)`
             );
         } catch (error) {
-            console.error('Error creating share link:', error);
             this.notificationManager.showError('Error creating share link.');
         }
     }
@@ -222,7 +216,6 @@ class ShareManager {
             await this.copyToClipboard(shareUrl);
             this.notificationManager.showSuccess(`Share link created with ${limit} most recent workouts (of ${shareData.workouts.length} total)`);
         } catch (error) {
-            console.error('Error sharing recent workouts:', error);
             this.notificationManager.showError('Error creating share link.');
         }
     }
@@ -257,7 +250,6 @@ class ShareManager {
                 textArea.remove();
             }
         } catch (error) {
-            console.error('Failed to copy to clipboard:', error);
             this.showManualCopyDialog(text);
         }
     }
@@ -280,7 +272,7 @@ class ShareManager {
         const urlParams = new URLSearchParams(window.location.search);
         const compressedData = urlParams.get('c');
         const legacyData = urlParams.get('data'); // For backward compatibility
-        
+
         if (compressedData) {
             this.importCompressedData(compressedData);
         } else if (legacyData) {
@@ -295,7 +287,6 @@ class ShareManager {
             const shareData = this.restoreDataFromOptimized(optimizedData);
             this.showImportDialog(shareData);
         } catch (error) {
-            console.error('Error importing compressed data:', error);
             this.notificationManager.showError('Error importing shared workout data. The link may be corrupted.');
         }
     }
@@ -306,7 +297,6 @@ class ShareManager {
             const shareData = JSON.parse(jsonString);
             this.showImportDialog(shareData);
         } catch (error) {
-            console.error('Error importing legacy shared data:', error);
             this.notificationManager.showError(
                 'Error importing shared workout data.'
             );
@@ -337,24 +327,23 @@ class ShareManager {
             if (shareData.exerciseTypes && Array.isArray(shareData.exerciseTypes)) {
                 this.exerciseTypeManager.setExerciseTypes(shareData.exerciseTypes);
             }
-            
+
             // Import workouts
             this.workoutDataManager.replaceAllData(shareData.workouts);
             // Persist immediately
             if (this.workoutDataManager.saveWorkoutData) {
                 this.workoutDataManager.saveWorkoutData();
             }
-            
+
             this.notificationManager.showSuccess(
                 `Successfully imported ${shareData.workouts.length} workout(s)!`
             );
-            
+
             setTimeout(() => {
                 window.location.reload();
             }, 1500);
-            
+
         } catch (error) {
-            console.error('Error performing import:', error);
             this.notificationManager.showError(
                 'Error importing workout data.'
             );
