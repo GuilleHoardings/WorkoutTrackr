@@ -130,8 +130,16 @@ function getAllDatesBetweenWorkouts(workouts, maxDays = 90) {
     const maxDaysAgo = new Date(today);
     maxDaysAgo.setDate(today.getDate() - maxDays);
 
-    const startDate = new Date(Math.max(firstDate.getTime(), maxDaysAgo.getTime()));
-    const endDate = new Date(Math.min(lastDate.getTime(), today.getTime()));
+    // Normalize all dates to midnight to avoid time-of-day comparison issues
+    const normalizeToMidnight = (d) => new Date(d.getFullYear(), d.getMonth(), d.getDate());
+
+    const normalizedFirst = normalizeToMidnight(firstDate);
+    const normalizedLast = normalizeToMidnight(lastDate);
+    const normalizedToday = normalizeToMidnight(today);
+    const normalizedMaxDaysAgo = normalizeToMidnight(maxDaysAgo);
+
+    const startDate = new Date(Math.max(normalizedFirst.getTime(), normalizedMaxDaysAgo.getTime()));
+    const endDate = new Date(Math.max(normalizedLast.getTime(), normalizedToday.getTime()));
 
     const allDates = [];
     const currentDate = new Date(startDate);
